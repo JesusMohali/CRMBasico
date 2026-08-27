@@ -342,6 +342,7 @@ h2 {
     position: relative;
     min-height: 142px;
     overflow: hidden;
+    background: var(--background);
 }
 
 .stat-card small {

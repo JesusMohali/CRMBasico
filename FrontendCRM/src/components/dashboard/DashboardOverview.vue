@@ -2,7 +2,7 @@
 	<div class="dashboard">
 		<section class="page-toolbar">
 			<div>
-				<h1>Overview</h1>
+				<h1>Dashboard</h1>
 				<p><a href="#">Home</a></p>
 			</div>
 			<div class="toolbar-actions">
@@ -30,6 +30,9 @@
 					</Transition>
 				</div>
 			</div>
+		</section>
+		<section>
+			<CardInfo />
 		</section>
 		<section class="demo-grid">
 			<article class="kt-card setup-card">
@@ -105,6 +108,7 @@ import TeamsTable from './TeamsTable.vue'
 import Charts from './Charts.vue'
 import { useUiStore } from '../../stores'
 import setupImage from '@/assets/media/illustrations/32.svg'
+import CardInfo from './CardInfo.vue'
 const avatarUrls = import.meta.glob('@/assets/media/avatars/gray/*', { eager: true, query: '?url', import: 'default' }) as Record<string, string>
 const ui = useUiStore();
 const month = ref('September, 2024')

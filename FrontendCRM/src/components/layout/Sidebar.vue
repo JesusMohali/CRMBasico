@@ -57,12 +57,12 @@ onBeforeUnmount(() => document.removeEventListener('click', closeUserMenu));
 <template>
 	<aside class="sidebar" :class="{ 'sidebar-open': ui.sidebarOpen }">
 		<div class="brand">
-			<img :src="logo" alt="Metronic" /><strong>Metronic</strong
+			<img :src="logo" alt="Metronic" /><strong>Peak Intelligence</strong
 			><button class="icon-btn close-mobile" @click="ui.sidebarOpen = false"><i class="ki-filled ki-cross" /></button>
 		</div>
 		<div class="sidebar-actions">
-			<button class="kt-btn kt-btn-secondary sidebar-add"><i class="ki-filled ki-plus" /> <span>Add New</span></button
-			><button class="kt-btn kt-btn-icon sidebar-search" title="Search" @click="ui.searchOpen = true"><i class="ki-filled ki-magnifier" /></button>
+			<!-- <button class="kt-btn kt-btn-secondary sidebar-add"><i class="ki-filled ki-plus" /> <span>Add New</span></button
+			><button class="kt-btn kt-btn-icon sidebar-search" title="Search" @click="ui.searchOpen = true"><i class="ki-filled ki-magnifier" /></button> -->
 		</div>
 		<nav class="sidebar-nav">
 			<p class="nav-label">Pages</p>
