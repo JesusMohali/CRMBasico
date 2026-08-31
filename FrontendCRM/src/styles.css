@@ -2238,3 +2238,352 @@ h2 {
         padding: 0 48px;
     }
 }
+
+/* ── Contact details panel (Chat) ─────────────────────────────── */
+.chat-layout.panel-open {
+	grid-template-columns: 310px minmax(0, 1fr) 320px;
+}
+
+.contact-panel {
+	min-width: 0;
+	min-height: 0;
+	display: flex;
+	flex-direction: column;
+	border-left: 1px solid var(--border);
+	background: var(--surface);
+}
+
+.contact-panel-head {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 22px 20px 16px;
+	flex: none;
+}
+
+.contact-panel-head h2 {
+	font-size: 17px;
+	font-weight: 700;
+}
+
+.contact-panel-body {
+	min-height: 0;
+	flex: 1 1 auto;
+	overflow-y: auto;
+	overflow-x: hidden;
+	padding: 0 20px 24px;
+	scrollbar-width: thin;
+	scrollbar-color: #c7ccd4 transparent;
+}
+
+.contact-panel-body::-webkit-scrollbar {
+	width: 7px;
+}
+
+.contact-panel-body::-webkit-scrollbar-track {
+	background: transparent;
+}
+
+.contact-panel-body::-webkit-scrollbar-thumb {
+	background: #c7ccd4;
+	border: 2px solid transparent;
+	border-radius: 8px;
+	background-clip: content-box;
+}
+
+.contact-panel-body::-webkit-scrollbar-thumb:hover {
+	background: #9da5b1;
+	background-clip: content-box;
+}
+
+:root.dark .contact-panel-body {
+	scrollbar-color: #4a515d transparent;
+}
+
+:root.dark .contact-panel-body::-webkit-scrollbar-thumb {
+	background: #4a515d;
+	background-clip: content-box;
+}
+
+:root.dark .contact-panel-body::-webkit-scrollbar-thumb:hover {
+	background: #697382;
+	background-clip: content-box;
+}
+
+.contact-panel-section {
+	border-top: 1px solid var(--border);
+	padding: 16px 0;
+}
+
+.contact-panel-section:first-child {
+	border-top: 0;
+	padding-top: 0;
+}
+
+.contact-panel-section-head {
+	width: 100%;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	color: var(--text);
+	background: transparent;
+	font-size: 13px;
+	font-weight: 600;
+}
+
+.contact-panel-section-head span {
+	flex: 1;
+	text-align: left;
+}
+
+.contact-panel-section-head i:first-child {
+	color: var(--muted-foreground);
+	font-size: 15px;
+}
+
+.contact-panel-section-head i:last-child {
+	color: var(--muted-foreground);
+	font-size: 11px;
+}
+
+.contact-panel-section-body {
+	margin-top: 14px;
+	display: grid;
+	gap: 12px;
+}
+
+.contact-field {
+	display: block;
+	font-size: 11px;
+	color: var(--muted-foreground);
+}
+
+.contact-field span {
+	display: flex;
+	align-items: center;
+	gap: 5px;
+	margin-bottom: 5px;
+}
+
+.contact-field input {
+	width: 100%;
+	height: 36px;
+	padding: 0 10px;
+	border: 1px solid var(--border);
+	border-radius: 6px;
+	background: var(--background);
+	color: var(--text);
+	font-size: 12px;
+	outline: 0;
+}
+
+.contact-field input:focus {
+	border-color: var(--primary);
+	box-shadow: 0 0 0 3px #287de51a;
+}
+
+.contact-panel-empty {
+	color: var(--muted-foreground);
+	font-size: 11px;
+}
+
+.tag-list {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+}
+
+.tag-pill {
+	display: inline-flex;
+	align-items: center;
+	gap: 5px;
+	padding: 4px 6px 4px 10px;
+	border-radius: 999px;
+	background: var(--background);
+	border: 1px solid var(--border);
+	color: var(--text);
+	font-size: 11px;
+}
+
+.tag-pill button {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 16px;
+	height: 16px;
+	color: var(--muted-foreground);
+	background: transparent;
+	border-radius: 50%;
+}
+
+.tag-pill button:hover {
+	color: #fff;
+	background: #ef4444;
+}
+
+.tag-pill button i {
+	font-size: 9px;
+}
+
+.tag-input-row {
+	display: flex;
+	gap: 6px;
+	margin-top: 10px;
+}
+
+.tag-input-row input {
+	flex: 1;
+	height: 34px;
+	padding: 0 10px;
+	border: 1px solid var(--border);
+	border-radius: 6px;
+	background: var(--background);
+	color: var(--text);
+	font-size: 12px;
+	outline: 0;
+}
+
+.tag-input-row .kt-btn {
+	padding: 0 11px;
+}
+
+.bot-control {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 10px;
+}
+
+.contact-panel-hint {
+	margin-top: 8px;
+	color: var(--muted-foreground);
+	font-size: 11px;
+	line-height: 1.5;
+}
+
+.system-field-row {
+	display: flex;
+	gap: 6px;
+	align-items: center;
+	margin-bottom: 8px;
+}
+
+.system-field-label,
+.system-field-value {
+	min-width: 0;
+	flex: 1;
+	height: 34px;
+	padding: 0 9px;
+	border: 1px solid var(--border);
+	border-radius: 6px;
+	background: var(--background);
+	color: var(--text);
+	font-size: 11px;
+	outline: 0;
+}
+
+.system-field-row .icon-btn {
+	flex: none;
+}
+
+.chat-window-actions button.active {
+	color: var(--primary);
+	background: var(--background);
+}
+.panel-slide-enter-active,
+.panel-slide-leave-active {
+	transition: opacity .22s ease, transform .22s ease;
+}
+
+.panel-slide-enter-from,
+.panel-slide-leave-to {
+	opacity: 0;
+	transform: translateX(100%);
+}
+@media (max-width: 1100px) {
+	.chat-layout.panel-open {
+		grid-template-columns: 310px minmax(0, 1fr);
+		position: relative;
+	}
+
+	.contact-panel {
+		position: absolute;
+		inset: 0 0 0 auto;
+		z-index: 15;
+		width: min(320px, 100%);
+		box-shadow: -10px 0 25px #1d293914;
+	}
+}
+
+@media (max-width: 900px) {
+	.chat-layout.panel-open {
+		grid-template-columns: 270px minmax(0, 1fr);
+	}
+}
+
+@media (max-width: 650px) {
+	.contact-panel {
+		width: 100%;
+	}
+}
+
+/* ── Campos del sistema: "nombre del campo" más angosto que "valor" ── */
+.system-field-label {
+	flex: 0 0 84px;
+}
+
+.system-field-value {
+	flex: 1;
+	min-width: 0;
+}
+
+/* ── Scroll lateral en la ventana de chat ─────────────────────────
+   Cuando el panel de contacto está abierto, la columna del chat
+   (minmax(0, 1fr)) se achica. En vez de aplastar el header/los
+   mensajes/el composer, les ponemos un ancho mínimo y dejamos que
+   .chat-window scrollee horizontalmente para llegar a lo que no entra. */
+.chat-window {
+	overflow-x: auto;
+	scrollbar-width: thin;
+	scrollbar-color: #c7ccd4 transparent;
+}
+
+.chat-window-head,
+.message-list,
+.message-composer {
+	min-width: 480px;
+}
+
+.chat-window::-webkit-scrollbar {
+	height: 7px;
+}
+
+.chat-window::-webkit-scrollbar-track {
+	background: transparent;
+}
+
+.chat-window::-webkit-scrollbar-thumb {
+	background: #c7ccd4;
+	border: 2px solid transparent;
+	border-radius: 8px;
+	background-clip: content-box;
+}
+
+.chat-window::-webkit-scrollbar-thumb:hover {
+	background: #9da5b1;
+	background-clip: content-box;
+}
+
+:root.dark .chat-window {
+	scrollbar-color: #4a515d transparent;
+}
+
+:root.dark .chat-window::-webkit-scrollbar-thumb {
+	background: #4a515d;
+	background-clip: content-box;
+}
+
+:root.dark .chat-window::-webkit-scrollbar-thumb:hover {
+	background: #697382;
+	background-clip: content-box;
+}
