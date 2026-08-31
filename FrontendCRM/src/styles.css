@@ -81,6 +81,7 @@ button {
     background: #08090b;
     color: #aeb5c1;
     display: flex;
+    border-right: 1px solid #282c33;
     flex-direction: column;
     padding: 18px 14px 14px;
 }
@@ -2586,4 +2587,92 @@ h2 {
 :root.dark .chat-window::-webkit-scrollbar-thumb:hover {
 	background: #697382;
 	background-clip: content-box;
+}
+
+:root {
+	--sidebar-collapsed-width: 80px;
+	--sidebar-transition: width .3s ease;
+}
+
+.sidebar {
+	transition: var(--sidebar-transition);
+}
+
+.content-shell {
+	transition: margin-left .3s ease;
+}
+
+.brand {
+	position: relative;
+}
+
+.sidebar-toggle {
+	position: absolute;
+	top: 50%;
+	right: -28px;
+	transform: translateY(-50%);
+	width: 28px;
+	height: 28px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	border-radius: 50%;
+	border: 1px solid #2b2f36;
+	background: #fafafa;
+	color: #080808;
+}
+
+.sidebar-toggle:hover {
+	color: #fff;
+	background: #24282e;
+}
+
+.sidebar-toggle i {
+	font-size: 11px;
+	transition: transform .3s ease;
+}
+
+.sidebar.sidebar-collapsed .sidebar-toggle i {
+	transform: rotate(180deg);
+}
+
+@media (max-width: 1024px) {
+	.sidebar-toggle {
+		display: none;
+	}
+}
+
+@media (min-width: 1024px) {
+	.sidebar.sidebar-collapsed {
+		width: var(--sidebar-collapsed-width);
+	}
+
+	.sidebar.sidebar-collapsed ~ .content-shell {
+		margin-left: var(--sidebar-collapsed-width);
+	}
+
+	.sidebar.sidebar-collapsed:hover {
+		width: var(--sidebar);
+	}
+
+	.sidebar.sidebar-collapsed:not(:hover) .brand strong,
+	.sidebar.sidebar-collapsed:not(:hover) .nav-label,
+	.sidebar.sidebar-collapsed:not(:hover) .nav-label-text,
+	.sidebar.sidebar-collapsed:not(:hover) .nav-arrow,
+	.sidebar.sidebar-collapsed:not(:hover) .subnav,
+	.sidebar.sidebar-collapsed:not(:hover) .user-summary,
+	.sidebar.sidebar-collapsed:not(:hover) .footer-actions {
+		display: none;
+	}
+
+	.sidebar.sidebar-collapsed:not(:hover) .nav-item,
+	.sidebar.sidebar-collapsed:not(:hover) .sidebar-foot {
+		justify-content: center;
+	}
+}
+
+/* ── Switch de modo oscuro: azul cuando está encendido ───────────── */
+.theme-item .theme-switch:checked {
+	background: var(--primary);
+	border-color: var(--primary);
 }

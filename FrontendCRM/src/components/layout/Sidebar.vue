@@ -61,10 +61,11 @@ onMounted(() => document.addEventListener('click', closeUserMenu));
 onBeforeUnmount(() => document.removeEventListener('click', closeUserMenu));
 </script>
 <template>
-	<aside class="sidebar" :class="{ 'sidebar-open': ui.sidebarOpen }">
+	<aside class="sidebar" :class="{ 'sidebar-open': ui.sidebarOpen, 'sidebar-collapsed': ui.sidebarCollapsed }">
 		<div class="brand">
 			<img :src="logo" alt="Metronic" /><strong>Peak Intelligence</strong
-			><button class="icon-btn close-mobile" @click="ui.sidebarOpen = false"><i class="ki-filled ki-cross" /></button>
+			><button class="icon-btn close-mobile" @click="ui.sidebarOpen = false"><i class="ki-filled ki-cross" /></button
+			><button class="sidebar-toggle" type="button" title="Colapsar menú" @click="ui.setSidebarCollapsed(!ui.sidebarCollapsed)"><i class="ki-filled ki-black-left-line" /></button>
 		</div>
 		<div class="sidebar-actions">
 			<!-- <button class="kt-btn kt-btn-secondary sidebar-add"><i class="ki-filled ki-plus" /> <span>Add New</span></button
@@ -78,16 +79,14 @@ onBeforeUnmount(() => document.removeEventListener('click', closeUserMenu));
 					:to="section.path"
 					class="nav-item"
 					active-class="active">
-					<span class="nav-icon"><i class="ki-filled" :class="section.icon" /></span>{{ section.label
-					}}
+					<span class="nav-icon"><i class="ki-filled" :class="section.icon" /></span><span class="nav-label-text">{{ section.label }}</span>
 				</RouterLink>
 				<button
 					v-else
 					class="nav-item"
 					:class="{ active: route.path === section.path || section.children.some((child) => child.path === route.path) }"
 					@click="toggleSection(section.label, section.path)">
-					<span class="nav-icon"><i class="ki-filled" :class="section.icon" /></span>{{ section.label
-					}}<span class="nav-arrow"><i class="ki-filled" :class="expanded === section.label ? 'ki-up' : 'ki-down'" /></span>
+					<span class="nav-icon"><i class="ki-filled" :class="section.icon" /></span><span class="nav-label-text">{{ section.label }}</span><span class="nav-arrow"><i class="ki-filled" :class="expanded === section.label ? 'ki-up' : 'ki-down'" /></span>
 				</button>
 				<Transition name="submenu"
 					><div v-if="section.children && expanded === section.label" class="subnav">
