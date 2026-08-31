@@ -123,7 +123,7 @@ function onSystemFieldInput(id: number, key: 'label' | 'value', event: Event) {
 					<div v-for="field in conversation.systemFields" :key="field.id" class="system-field-row">
 						<input class="system-field-label" placeholder="Nombre del campo" :value="field.label" @input="onSystemFieldInput(field.id, 'label', $event)" />
 						<input class="system-field-value" placeholder="Valor" :value="field.value" @input="onSystemFieldInput(field.id, 'value', $event)" />
-						<button class="icon-btn" type="button" title="Quitar campo" @click="emit('remove-system-field', field.id)"><i class="ki-filled ki-trash" /></button>
+						<!-- <button class="icon-btn" type="button" title="Quitar campo" @click="emit('remove-system-field', field.id)"><i class="ki-filled ki-trash" /></button> -->
 					</div>
 					<p v-if="!conversation.systemFields.length" class="contact-panel-empty">Todavía no hay campos del sistema.</p>
 					<!-- <button class="kt-btn kt-btn-secondary" type="button" @click="emit('add-system-field')"><i class="ki-filled ki-plus" /> Añadir campo</button> -->
