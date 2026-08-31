@@ -1,23 +1,46 @@
 @import 'tailwindcss';
 @import './assets/keenicons/styles.bundle.css';
 
+/* ── Metronic (KTUI) ──────────────────────────────────────────────
+   Rutas que Tailwind debe escanear ademas de src/, porque estos
+   componentes de KTUI viven en node_modules y usan clases de
+   utilidad que si no, Tailwind nunca generaria. */
+@source '../node_modules/@keenthemes/ktui/src/components/alert/';
+@source '../node_modules/@keenthemes/ktui/src/components/toast/';
+
+/* Tema real de Metronic: define --color-primary, --color-border,
+   --color-card, --radius-*, soporte de modo oscuro via .dark, etc. */
+@import './styles/metronic/config.ktui.css';
+
+/* Clases .kt-btn, .kt-card, .kt-badge, .kt-modal, .kt-menu, .kt-table,
+   .kt-switch... vienen del propio paquete npm @keenthemes/ktui. */
+@import '../node_modules/@keenthemes/ktui/styles.css';
+
+/* Estilos especificos de componentes/plugins de Metronic (apexcharts,
+   menus, tablas, scrollbars, rating, etc.) */
+@import './styles/metronic/components/index.css';
+
+/* Variables de layout del sidebar/header de la demo1 de Metronic.
+   No rompen nada aunque el layout actual no las use todavia; entran
+   en juego cuando AppLayout/Sidebar usen las clases kt-wrapper /
+   kt-header / kt-sidebar reales. */
+@import './styles/metronic/demos/demo1.css';
+/* ──────────────────────────────────────────────────────────────── */
+
 :root {
-    --background: #f7f8fa;
-    --surface: #fff;
-    --text: #17191c;
-    --muted: #747b86;
-    --border: #e7e9ed;
-    --primary: #287de5;
+    /* --background, --border, --primary y --muted ahora los definen
+       las variables reales de Metronic en config.ktui.css (con modo
+       oscuro real via .dark). Se quitaron de aqui para no pisarlas.
+
+       --surface y --text quedan como alias hacia los tokens de
+       Metronic para no tener que reescribir ahora mismo las ~700
+       lineas de CSS de este archivo que ya los usan. Se pueden ir
+       reemplazando por var(--card) / var(--foreground) directamente
+       a medida que se toque cada componente. */
+    --surface: var(--card);
+    --text: var(--foreground);
     --sidebar: 270px;
     --header: 64px;
-}
-
-:root.dark {
-    --background: #101114;
-    --surface: #17191d;
-    --text: #f4f5f7;
-    --muted: #9299a5;
-    --border: #292d34;
 }
 
 * {
@@ -188,7 +211,7 @@ button {
     display: flex;
     gap: 10px;
     font-size: 13px;
-    color: var(--muted);
+    color: var(--muted-foreground);
 }
 
 .breadcrumbs strong {
@@ -295,7 +318,7 @@ h2 {
 
 .welcome-row p,
 .card-head p {
-    color: var(--muted);
+    color: var(--muted-foreground);
     font-size: 12px;
     margin-top: 6px;
 }
@@ -347,7 +370,7 @@ h2 {
 
 .stat-card small {
     display: block;
-    color: var(--muted);
+    color: var(--muted-foreground);
     font-size: 12px;
     margin: 2px 0 10px;
 }
@@ -717,7 +740,7 @@ h2 {
 
 .tabs button,
 .drawer-tabs button {
-    color: var(--muted);
+    color: var(--muted-foreground);
     background: transparent;
     padding: 6px 9px;
     border-radius: 4px;
@@ -790,7 +813,7 @@ h2 {
 
 .activity p,
 .notification-list p {
-    color: var(--muted);
+    color: var(--muted-foreground);
     font-size: 11px;
     margin-top: 4px;
 }
@@ -798,7 +821,7 @@ h2 {
 .activity time,
 .notification-list time {
     margin-left: auto;
-    color: var(--muted);
+    color: var(--muted-foreground);
     font-size: 10px;
     white-space: nowrap;
 }
@@ -835,7 +858,7 @@ h2 {
     border: 1px solid var(--border);
     border-radius: 6px;
     padding: 0 10px;
-    color: var(--muted);
+    color: var(--muted-foreground);
     height: 34px;
 }
 
@@ -862,7 +885,7 @@ h2 {
 }
 
 .kt-table th {
-    color: var(--muted);
+    color: var(--muted-foreground);
     text-align: left;
     font-weight: 500;
     font-size: 11px;
@@ -888,7 +911,7 @@ h2 {
 .team-name small {
     display: block;
     margin-top: 5px;
-    color: var(--muted);
+    color: var(--muted-foreground);
     font-size: 10px;
     font-weight: 400;
 }
@@ -967,7 +990,7 @@ h2 {
 
 .status.archived {
     background: var(--background);
-    color: var(--muted);
+    color: var(--muted-foreground);
 }
 
 .pagination {
@@ -975,7 +998,7 @@ h2 {
     justify-content: space-between;
     align-items: center;
     padding: 14px 8px 3px;
-    color: var(--muted);
+    color: var(--muted-foreground);
     font-size: 11px;
 }
 
@@ -1039,7 +1062,7 @@ h2 {
 
 .empty-state {
     text-align: center;
-    color: var(--muted);
+    color: var(--muted-foreground);
     padding: 28px 20px 35px;
     font-size: 12px;
 }
@@ -1060,7 +1083,7 @@ h2 {
 }
 
 .search-result small {
-    color: var(--muted);
+    color: var(--muted-foreground);
     margin-top: 4px;
 }
 
@@ -1130,7 +1153,7 @@ h2 {
 }
 
 .profile-content p {
-    color: var(--muted);
+    color: var(--muted-foreground);
     font-size: 12px;
     margin: 5px 0 18px;
 }
@@ -1287,13 +1310,13 @@ h2 {
 }
 
 .page-toolbar p {
-    color: var(--muted);
+    color: var(--muted-foreground);
     font-size: 12px;
     margin-top: 7px;
 }
 
 .page-toolbar a {
-    color: var(--muted);
+    color: var(--muted-foreground);
     text-decoration: none;
 }
 
@@ -1331,7 +1354,7 @@ h2 {
 .setup-card p {
     max-width: 610px;
     margin: 10px auto 17px;
-    color: var(--muted);
+    color: var(--muted-foreground);
     font-size: 13px;
     line-height: 1.65;
 }
@@ -1346,7 +1369,7 @@ h2 {
 
 .highlight-total small {
     display: block;
-    color: var(--muted);
+    color: var(--muted-foreground);
     font-size: 12px;
     margin-bottom: 6px;
 }
@@ -1395,7 +1418,7 @@ h2 {
     display: flex;
     gap: 13px;
     flex-wrap: wrap;
-    color: var(--muted);
+    color: var(--muted-foreground);
     font-size: 11px;
     padding-bottom: 18px;
     border-bottom: 1px solid var(--border);
@@ -1444,7 +1467,7 @@ h2 {
 }
 
 .block-card>p {
-    color: var(--muted);
+    color: var(--muted-foreground);
     line-height: 1.6;
     font-size: 12px;
     margin: 17px 0;
@@ -1503,14 +1526,14 @@ h2 {
 }
 
 .block-card li small {
-    color: var(--muted);
+    color: var(--muted-foreground);
     font-size: 11px;
     margin-top: 3px;
 }
 
 .block-card li .icon-btn {
     margin-left: auto;
-    color: var(--muted);
+    color: var(--muted-foreground);
 }
 
 .kt-card,
@@ -1621,12 +1644,12 @@ h2 {
     display: flex;
     align-items: center;
     gap: 9px;
-    color: var(--muted);
+    color: var(--muted-foreground);
     font-size: 12px;
 }
 
 .chat-page-heading nav a {
-    color: var(--muted);
+    color: var(--muted-foreground);
     text-decoration: none;
 }
 
@@ -1678,7 +1701,7 @@ h2 {
 }
 
 .chat-icon-button {
-    color: var(--muted);
+    color: var(--muted-foreground);
     background: transparent;
     font-size: 18px;
 }
@@ -1694,7 +1717,7 @@ h2 {
     gap: 9px;
     margin: 0 16px 14px;
     padding: 0 12px;
-    color: var(--muted);
+    color: var(--muted-foreground);
     background: var(--background);
     border: 1px solid var(--border);
     border-radius: 7px;
@@ -1756,13 +1779,13 @@ h2 {
 
 .conversation-copy small {
     margin-top: 4px;
-    color: var(--muted);
+    color: var(--muted-foreground);
     font-size: 10px;
 }
 
 .conversation-item time {
     align-self: flex-start;
-    color: var(--muted);
+    color: var(--muted-foreground);
     font-size: 9px;
     white-space: nowrap;
 }
@@ -1831,7 +1854,7 @@ h2 {
     align-items: center;
     gap: 5px;
     margin-top: 4px;
-    color: var(--muted);
+    color: var(--muted-foreground);
     font-size: 10px;
 }
 
@@ -1839,7 +1862,7 @@ h2 {
     width: 6px;
     height: 6px;
     border-radius: 50%;
-    background: var(--muted);
+    background: var(--muted-foreground);
 }
 
 .chat-contact p i.online {
@@ -1855,7 +1878,7 @@ h2 {
 .message-composer button {
     width: 32px;
     height: 32px;
-    color: var(--muted);
+    color: var(--muted-foreground);
     background: transparent;
     border-radius: 6px;
 }
@@ -1877,7 +1900,7 @@ h2 {
     align-items: center;
     gap: 12px;
     margin: 2px 0 24px;
-    color: var(--muted);
+    color: var(--muted-foreground);
     font-size: 9px;
     letter-spacing: .08em;
 }
@@ -1927,7 +1950,7 @@ h2 {
 .message-row time {
     display: block;
     margin-top: 5px;
-    color: var(--muted);
+    color: var(--muted-foreground);
     font-size: 9px;
 }
 
@@ -1970,7 +1993,7 @@ h2 {
 
 .chat-empty {
     padding: 28px 12px;
-    color: var(--muted);
+    color: var(--muted-foreground);
     text-align: center;
     font-size: 11px;
 }
@@ -2160,7 +2183,7 @@ h2 {
     background: #24282e;
 }
 
-.theme-item .kt-switch {
+.theme-item .theme-switch {
     appearance: none;
     -webkit-appearance: none;
     position: relative;
@@ -2175,7 +2198,7 @@ h2 {
     transition: background-color .2s ease, border-color .2s ease;
 }
 
-.theme-item .kt-switch::before {
+.theme-item .theme-switch::before {
     content: '';
     position: absolute;
     top: 3px;
@@ -2188,11 +2211,11 @@ h2 {
     transition: transform .2s ease;
 }
 
-.theme-item .kt-switch:checked::before {
+.theme-item .theme-switch:checked::before {
     transform: translateX(10px);
 }
 
-.theme-item .kt-switch:focus-visible {
+.theme-item .theme-switch:focus-visible {
     outline: 2px solid #5d9aff;
     outline-offset: 2px;
 }

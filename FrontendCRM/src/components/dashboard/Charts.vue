@@ -24,8 +24,8 @@ function render() {
 		dataLabels: { enabled: false },
 		legend: { show: isDonut, position: 'bottom', fontSize: '12px' },
 		grid: { borderColor: 'var(--border)', strokeDashArray: 4 },
-		xaxis: { categories: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep'], labels: { style: { colors: 'var(--muted)' } } },
-		yaxis: { labels: { style: { colors: 'var(--muted)' } } },
+		xaxis: { categories: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep'], labels: { style: { colors: 'var(--muted-foreground)' } } },
+		yaxis: { labels: { style: { colors: 'var(--muted-foreground)' } } },
 		tooltip: { theme: document.documentElement.classList.contains('dark') ? 'dark' : 'light' },
 	});
 	chart.render();

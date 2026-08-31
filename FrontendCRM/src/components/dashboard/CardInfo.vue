@@ -40,10 +40,10 @@ type StatCard = {
 }
 
 const cards: StatCard[] = [
-	{ label: 'Total Pipeline', value: '$842K', change: '+12.4%', icon: 'ki-briefcase', color: '#635bff', chart: 'M0,37 L9,34 L18,35 L27,29 L36,24 L45,26 L55,20 L64,16 L73,18 L82,12 L91,8 L100,3' },
-	{ label: 'Won This Month', value: '$284K', change: '+22.1%', icon: 'ki-cup', color: '#10a7a7', chart: 'M0,37 L9,29 L18,33 L27,27 L36,24 L45,20 L55,23 L64,16 L73,14 L82,11 L91,8 L100,3' },
-		{ label: 'Win Rate', value: '34.2%', change: '+3.8%', icon: 'ki-chart-simple', color: '#2b91e8', chart: 'M0,37 L9,27 L18,32 L27,22 L36,27 L45,13 L55,18 L64,8 L73,13 L82,3 L91,8 L100,8' },
-		{ label: 'Avg Deal Size', value: '$18.4K', change: '-2.1%', negative: true, icon: 'ki-graph-up', color: '#e9a11b', chart: 'M0,17 L9,3 L18,23 L27,10 L36,30 L45,23 L55,30 L64,37 L73,23 L82,30 L91,30 L100,30' },
+	{ label: 'Leads (24h)', value: '200', change: '+12.4%', icon: 'ki-briefcase', color: '#635bff', chart: 'M0,37 L9,34 L18,35 L27,29 L36,24 L45,26 L55,20 L64,16 L73,18 L82,12 L91,8 L100,3' },
+	{ label: 'Agendas confirmadas', value: '172', change: '+22.1%', icon: 'ki-cup', color: '#10a7a7', chart: 'M0,37 L9,29 L18,33 L27,27 L36,24 L45,20 L55,23 L64,16 L73,14 L82,11 L91,8 L100,3' },
+		{ label: 'Links enviados', value: '400', change: '+3.8%', icon: 'ki-chart-simple', color: '#2b91e8', chart: 'M0,37 L9,27 L18,32 L27,22 L36,27 L45,13 L55,18 L64,8 L73,13 L82,3 L91,8 L100,8' },
+		{ label: 'Links abiertos', value: '250', change: '-10.1%', negative: true, icon: 'ki-graph-up', color: '#e9a11b', chart: 'M0,17 L9,3 L18,23 L27,10 L36,30 L45,23 L55,30 L64,37 L73,23 L82,30 L91,30 L100,30' },
 ]
 </script>
 
@@ -83,7 +83,7 @@ const cards: StatCard[] = [
 
 .crm-stat-label {
 	margin: 0 0 8px;
-	color: var(--muted);
+	color: var(--muted-foreground);
 	font-size: 12px;
 	font-weight: 500;
 }

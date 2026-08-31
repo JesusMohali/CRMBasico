@@ -2,16 +2,22 @@
 import { onBeforeUnmount, onMounted, ref } from 'vue';
 import { RouterLink, useRoute, useRouter } from 'vue-router';
 import { useUiStore } from '../../stores';
-import logo from '../../assets/media/app/mini-logo-circle-success.svg';
+import logo from '@/assets/media/app/mini-logo-circle-success.svg';
 const ui = useUiStore();
 const route = useRoute();
 const router = useRouter();
 const expanded = ref('');
 const userMenuOpen = ref(false);
-const sections = [
+type NavSection = {
+	label: string;
+	icon: string;
+	path: string;
+	children?: { label: string; path: string }[];
+}
+const sections: NavSection[] = [
 	{ label: 'Overview', icon: 'ki-home-3', path: '/overview' },
 	{ label: 'Chat', icon: 'ki-message-text', path: '/chats' },
-	{
+	/* {
 		label: 'Public Profile',
 		icon: 'ki-profile-circle',
 		children: [
@@ -39,7 +45,7 @@ const sections = [
 			{ label: 'User Cards', path: '/network/user-cards' },
 			{ label: 'User Table', path: '/network/user-table' },
 		],
-	},
+	}, */
 ];
 function toggleSection(label: string, path: string) {
 	expanded.value = expanded.value === label ? '' : label;
@@ -128,7 +134,7 @@ onBeforeUnmount(() => document.removeEventListener('click', closeUserMenu));
 					<div class="user-menu-divider" />
 					<label class="user-menu-item theme-item"
 						><i class="ki-filled ki-moon" /> <b>Dark Mode</b
-						><input class="kt-switch" type="checkbox" :checked="ui.dark" @change="handleThemeChange"
+						><input class="theme-switch" type="checkbox" :checked="ui.dark" @change="handleThemeChange"
 					/></label>
 					<button class="logout-button" @click="userMenuOpen = false">Log out</button>
 				</div>

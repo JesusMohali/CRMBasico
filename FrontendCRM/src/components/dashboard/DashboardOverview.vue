@@ -6,7 +6,7 @@
 				<p><a href="#">Home</a></p>
 			</div>
 			<div class="toolbar-actions">
-				<button class="kt-btn kt-btn-outline" type="button"><i class="ki-filled ki-exit-down" />Export</button>
+				<!-- <button class="kt-btn kt-btn-outline" type="button"><i class="ki-filled ki-exit-down" />Export</button> -->
 				<div ref="monthMenu" class="kt-menu date-menu">
 					<button class="kt-btn kt-btn-outline date-toggle" type="button" :aria-expanded="monthMenuOpen" @click.stop="monthMenuOpen = !monthMenuOpen">
 						<i class="ki-filled ki-calendar" /><span>{{ month }}</span
@@ -34,7 +34,7 @@
 		<section>
 			<CardInfo />
 		</section>
-		<section class="demo-grid">
+		<!-- <section class="demo-grid">
 			<article class="kt-card setup-card">
 				<img class="setup-image" :src="setupImage" alt="" />
 				<div>
@@ -70,30 +70,9 @@
 					</li>
 				</ul>
 			</article>
-		</section>
-		<section class="demo-grid bottom-grid">
+		</section> -->
+		<section class="bottom-grid">
 			<TeamsTable />
-			<article class="kt-card block-card">
-				<div class="card-head"><h2>Block List</h2></div>
-				<p>Users on the block list are unable to send chat requests or messages to you.</p>
-				<label class="block-input"><input placeholder="Block new user" /><button class="kt-btn kt-btn-primary">Add</button></label>
-				<ul>
-					<li
-						v-for="person in [
-							['Esther Howard', '6 commits', '1.png'],
-							['Tyler Hero', '29 commits', '2.png'],
-							['Arlene McCoy', '34 commits', '3.png'],
-						]"
-						:key="person[0]">
-						<img :src="avatarUrls[`../../assets/media/avatars/gray/${person[2]}`]" alt="" />
-						<div>
-							<b>{{ person[0] }}</b
-							><small>{{ person[1] }}</small>
-						</div>
-						<button class="icon-btn">⌫</button>
-					</li>
-				</ul>
-			</article>
 		</section>
 		<section>
 			<div id="chart">
@@ -107,9 +86,7 @@ import { onBeforeUnmount, onMounted, ref } from 'vue'
 import TeamsTable from './TeamsTable.vue'
 import Charts from './Charts.vue'
 import { useUiStore } from '../../stores'
-import setupImage from '@/assets/media/illustrations/32.svg'
 import CardInfo from './CardInfo.vue'
-const avatarUrls = import.meta.glob('@/assets/media/avatars/gray/*', { eager: true, query: '?url', import: 'default' }) as Record<string, string>
 const ui = useUiStore();
 const month = ref('September, 2024')
 const monthMenuOpen = ref(false)
