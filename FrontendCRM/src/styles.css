@@ -2526,3 +2526,64 @@ h2 {
 		width: 100%;
 	}
 }
+
+/* ── Campos del sistema: "nombre del campo" más angosto que "valor" ── */
+.system-field-label {
+	flex: 0 0 84px;
+}
+
+.system-field-value {
+	flex: 1;
+	min-width: 0;
+}
+
+/* ── Scroll lateral en la ventana de chat ─────────────────────────
+   Cuando el panel de contacto está abierto, la columna del chat
+   (minmax(0, 1fr)) se achica. En vez de aplastar el header/los
+   mensajes/el composer, les ponemos un ancho mínimo y dejamos que
+   .chat-window scrollee horizontalmente para llegar a lo que no entra. */
+.chat-window {
+	overflow-x: auto;
+	scrollbar-width: thin;
+	scrollbar-color: #c7ccd4 transparent;
+}
+
+.chat-window-head,
+.message-list,
+.message-composer {
+	min-width: 480px;
+}
+
+.chat-window::-webkit-scrollbar {
+	height: 7px;
+}
+
+.chat-window::-webkit-scrollbar-track {
+	background: transparent;
+}
+
+.chat-window::-webkit-scrollbar-thumb {
+	background: #c7ccd4;
+	border: 2px solid transparent;
+	border-radius: 8px;
+	background-clip: content-box;
+}
+
+.chat-window::-webkit-scrollbar-thumb:hover {
+	background: #9da5b1;
+	background-clip: content-box;
+}
+
+:root.dark .chat-window {
+	scrollbar-color: #4a515d transparent;
+}
+
+:root.dark .chat-window::-webkit-scrollbar-thumb {
+	background: #4a515d;
+	background-clip: content-box;
+}
+
+:root.dark .chat-window::-webkit-scrollbar-thumb:hover {
+	background: #697382;
+	background-clip: content-box;
+}

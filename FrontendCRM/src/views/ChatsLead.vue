@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, ref } from 'vue';
 import ChatSidebar from '../components/chat/ChatSidebar.vue';
 import ChatWindow from '../components/chat/ChatWindow.vue';
 import ContactDetailsPanel from '../components/chat/ContactDetailsPanel.vue';
@@ -55,7 +55,10 @@ const conversations = ref<Conversation[]>([
 		phase: 'Suscrito',
 		tags: ['Cliente', 'Diseño'],
 		botPaused: false,
-		systemFields: [{ id: 1, label: 'Origen', value: 'Formulario web' }],
+		systemFields: [
+			{ id: 1, label: 'Nombre', value: 'Sarah' },
+			{ id: 2, label: 'Apellido', value: 'Chen' },
+		],
 	},
 	{
 		id: 2,
@@ -73,7 +76,10 @@ const conversations = ref<Conversation[]>([
 		phase: 'Fase 3',
 		tags: ['Cliente', 'Prioritario'],
 		botPaused: false,
-		systemFields: [],
+		systemFields: [
+			{ id: 1, label: 'Nombre', value: 'Marcus' },
+			{ id: 2, label: 'Apellido', value: 'Johnson' },
+		],
 	},
 	{
 		id: 3,
@@ -91,7 +97,10 @@ const conversations = ref<Conversation[]>([
 		phase: 'Inicial',
 		tags: ['Lead'],
 		botPaused: true,
-		systemFields: [],
+		systemFields: [
+			{ id: 1, label: 'Nombre', value: 'Alex' },
+			{ id: 2, label: 'Apellido', value: 'Rivera' },
+		],
 	},
 	{
 		id: 4,
@@ -109,7 +118,10 @@ const conversations = ref<Conversation[]>([
 		phase: 'Suscrito',
 		tags: ['Interno'],
 		botPaused: false,
-		systemFields: [],
+		systemFields: [
+			{ id: 1, label: 'Nombre', value: 'Design' },
+			{ id: 2, label: 'Apellido', value: 'Team' },
+		],
 	},
 	{
 		id: 5,
@@ -127,7 +139,10 @@ const conversations = ref<Conversation[]>([
 		phase: 'Pensativo',
 		tags: ['Lead', 'Marketing'],
 		botPaused: false,
-		systemFields: [{ id: 1, label: 'Origen', value: 'Instagram Ads' }],
+		systemFields: [
+			{ id: 1, label: 'Nombre', value: 'Priya' },
+			{ id: 2, label: 'Apellido', value: 'Sharma' },
+		],
 	},
 	{
 		id: 6,
@@ -145,7 +160,10 @@ const conversations = ref<Conversation[]>([
 		phase: 'Suscrito',
 		tags: ['Interno'],
 		botPaused: false,
-		systemFields: [],
+		systemFields: [
+			{ id: 1, label: 'Nombre', value: 'Sprint' },
+			{ id: 2, label: 'Apellido', value: 'Planning' },
+		],
 	},
 	{
 		id: 7,
@@ -163,7 +181,10 @@ const conversations = ref<Conversation[]>([
 		phase: 'Suscrito',
 		tags: ['Interno'],
 		botPaused: false,
-		systemFields: [],
+		systemFields: [
+			{ id: 1, label: 'Nombre', value: 'Sprint' },
+			{ id: 2, label: 'Apellido', value: 'Planning' },
+		],
 	},
 ]);
 
@@ -180,14 +201,6 @@ const activeId = ref(1);
 const search = ref('');
 const detailsOpen = ref(false);
 const panelColumnActive = ref(false);
-
-watch(detailsOpen, (isOpen) => {
-	if (isOpen) panelColumnActive.value = true;
-});
-
-function onPanelAfterLeave() {
-	panelColumnActive.value = false;
-}
 const activeConversation = computed(() => conversations.value.find((conversation) => conversation.id === activeId.value) ?? conversations.value[0]);
 const filteredConversations = computed(() => conversations.value.filter((conversation) => `${conversation.name} ${conversation.preview}`.toLowerCase().includes(search.value.toLowerCase())));
 
@@ -205,6 +218,11 @@ function sendMessage(text: string) {
 
 function toggleDetails() {
 	detailsOpen.value = !detailsOpen.value;
+	if (detailsOpen.value) panelColumnActive.value = true;
+}
+
+function onPanelAfterLeave() {
+	panelColumnActive.value = false;
 }
 
 function updateContactField(field: EditableContactField, value: string) {
@@ -248,21 +266,23 @@ function removeSystemField(id: number) {
 		<header class="page-toolbar chat-page-heading">
 			<div>
 				<h1>Chat</h1>
-				<p>
-					<RouterLink to="/overview">Home</RouterLink> / Chats
-				</p>
+				<p><RouterLink to="/overview">Home</RouterLink> / Chats</p>
 			</div>
 		</header>
 		<div class="chat-layout" :class="{ 'panel-open': panelColumnActive }">
-			<ChatSidebar :conversations="filteredConversations" :active-id="activeId" v-model:search="search"
-				@select="selectConversation" />
-			<ChatWindow :conversation="activeConversation" :messages="messageMap[activeId] ?? []" :details-open="detailsOpen"
-				@send="sendMessage" @toggle-details="toggleDetails" />
+			<ChatSidebar :conversations="filteredConversations" :active-id="activeId" v-model:search="search" @select="selectConversation" />
+			<ChatWindow :conversation="activeConversation" :messages="messageMap[activeId] ?? []" :details-open="detailsOpen" @send="sendMessage" @toggle-details="toggleDetails" />
 			<Transition name="panel-slide" @after-leave="onPanelAfterLeave">
-
-				<ContactDetailsPanel v-if="detailsOpen" :conversation="activeConversation" @close="detailsOpen = false"
-					@update-field="updateContactField" @add-tag="addTag" @remove-tag="removeTag" @toggle-bot="toggleBot"
-					@add-system-field="addSystemField" @update-system-field="updateSystemField"
+				<ContactDetailsPanel
+					v-if="detailsOpen"
+					:conversation="activeConversation"
+					@close="detailsOpen = false"
+					@update-field="updateContactField"
+					@add-tag="addTag"
+					@remove-tag="removeTag"
+					@toggle-bot="toggleBot"
+					@add-system-field="addSystemField"
+					@update-system-field="updateSystemField"
 					@remove-system-field="removeSystemField" />
 			</Transition>
 		</div>

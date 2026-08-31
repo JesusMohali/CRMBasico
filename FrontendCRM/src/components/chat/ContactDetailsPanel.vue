@@ -51,7 +51,7 @@ function onSystemFieldInput(id: number, key: 'label' | 'value', event: Event) {
 				<div v-if="sectionsOpen.contact" class="contact-panel-section-body">
 					<label class="contact-field">
 						<span>Nombre</span>
-						<input :value="conversation.firstName" @input="onFieldInput('firstName', $event)" />
+						<input :value="conversation.firstName" @input="onFieldInput('firstName', $event)" disabled />
 					</label>
 					<label class="contact-field">
 						<span>Apellido</span>
@@ -126,7 +126,7 @@ function onSystemFieldInput(id: number, key: 'label' | 'value', event: Event) {
 						<button class="icon-btn" type="button" title="Quitar campo" @click="emit('remove-system-field', field.id)"><i class="ki-filled ki-trash" /></button>
 					</div>
 					<p v-if="!conversation.systemFields.length" class="contact-panel-empty">Todavía no hay campos del sistema.</p>
-					<button class="kt-btn kt-btn-secondary" type="button" @click="emit('add-system-field')"><i class="ki-filled ki-plus" /> Añadir campo</button>
+					<!-- <button class="kt-btn kt-btn-secondary" type="button" @click="emit('add-system-field')"><i class="ki-filled ki-plus" /> Añadir campo</button> -->
 				</div>
 			</section>
 		</div>
