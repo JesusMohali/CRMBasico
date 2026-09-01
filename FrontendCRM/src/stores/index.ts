@@ -118,10 +118,65 @@ export const useConversationsStore = defineStore('conversationsStatus', () => {
   return { query, statusFilter, conversations, filtered, countsByStatus, search, setStatusFilter }
 })
 
+export type AttendanceStatus = 'Show' | 'No-show' | 'Pendiente'
+
+export const WEEKDAYS_ES = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
+
+export const LEAD_TIME_BUCKETS = ['Mismo día', '1-2 días', '3-7 días', '+7 días'] as const
+export type LeadTimeBucket = (typeof LEAD_TIME_BUCKETS)[number]
+
+interface Appointment {
+  id: number
+  name: string
+  weekday: string
+  leadTimeBucket: LeadTimeBucket
+  scheduledAt: string
+  status: AttendanceStatus
+}
+
+export const useAppointmentsStore = defineStore('appointments', () => {
+  const appointments = ref<Appointment[]>([
+    { id: 1, name: 'Sarah Chen', weekday: 'Lunes', leadTimeBucket: '1-2 días', scheduledAt: '21 Oct, 2024', status: 'Show' },
+    { id: 2, name: 'Marcus Johnson', weekday: 'Martes', leadTimeBucket: 'Mismo día', scheduledAt: '20 Oct, 2024', status: 'Show' },
+    { id: 3, name: 'Diana Lozano', weekday: 'Martes', leadTimeBucket: '3-7 días', scheduledAt: '20 Oct, 2024', status: 'No-show' },
+    { id: 4, name: 'Rodri Buero', weekday: 'Miércoles', leadTimeBucket: '1-2 días', scheduledAt: '19 Oct, 2024', status: 'Show' },
+    { id: 5, name: 'Valeria Suárez', weekday: 'Miércoles', leadTimeBucket: 'Mismo día', scheduledAt: '19 Oct, 2024', status: 'No-show' },
+    { id: 6, name: 'Miguel Garrido', weekday: 'Jueves', leadTimeBucket: 'Mismo día', scheduledAt: '18 Oct, 2024', status: 'Show' },
+    { id: 7, name: 'Carlos Lozano', weekday: 'Jueves', leadTimeBucket: '+7 días', scheduledAt: '18 Oct, 2024', status: 'No-show' },
+    { id: 8, name: 'Martín Ibarra', weekday: 'Jueves', leadTimeBucket: '1-2 días', scheduledAt: '18 Oct, 2024', status: 'Show' },
+    { id: 9, name: 'Diego Álvarez', weekday: 'Viernes', leadTimeBucket: '3-7 días', scheduledAt: '17 Oct, 2024', status: 'No-show' },
+    { id: 10, name: 'Lucía Fernández', weekday: 'Viernes', leadTimeBucket: '1-2 días', scheduledAt: '17 Oct, 2024', status: 'Show' },
+    { id: 11, name: 'Javier Martínez', weekday: 'Sábado', leadTimeBucket: 'Mismo día', scheduledAt: '16 Oct, 2024', status: 'Show' },
+    { id: 12, name: 'Camila Torres', weekday: 'Sábado', leadTimeBucket: '3-7 días', scheduledAt: '16 Oct, 2024', status: 'No-show' },
+    { id: 13, name: 'Ana Gómez', weekday: 'Lunes', leadTimeBucket: '3-7 días', scheduledAt: '23 Oct, 2024', status: 'Pendiente' },
+    { id: 14, name: 'Sofía Ramírez', weekday: 'Martes', leadTimeBucket: '1-2 días', scheduledAt: '24 Oct, 2024', status: 'Pendiente' },
+  ])
+
+  const resolved = computed(() => appointments.value.filter((item) => item.status !== 'Pendiente'))
+  const showCount = computed(() => resolved.value.filter((item) => item.status === 'Show').length)
+  const noShowCount = computed(() => resolved.value.filter((item) => item.status === 'No-show').length)
+  const showRate = computed(() => (resolved.value.length ? showCount.value / resolved.value.length : 0))
+  const noShowRate = computed(() => (resolved.value.length ? noShowCount.value / resolved.value.length : 0))
+
+  const byWeekday = computed(() => WEEKDAYS_ES.map((day) => ({
+    day,
+    show: resolved.value.filter((item) => item.weekday === day && item.status === 'Show').length,
+    noShow: resolved.value.filter((item) => item.weekday === day && item.status === 'No-show').length,
+  })))
+
+  const byLeadTime = computed(() => LEAD_TIME_BUCKETS.map((bucket) => {
+    const items = resolved.value.filter((item) => item.leadTimeBucket === bucket)
+    const show = items.filter((item) => item.status === 'Show').length
+    return { bucket, total: items.length, show, rate: items.length ? show / items.length : 0 }
+  }))
+
+  return { appointments, resolved, showCount, noShowCount, showRate, noShowRate, byWeekday, byLeadTime }
+})
+
 export const PERIODS = ['7 días', '30 días', '90 días', '6 meses', '1 año', 'Personalizado'] as const
 export type Period = (typeof PERIODS)[number]
 
-interface FunnelInputs {
+export interface FunnelInputs {
   conversaciones: number
   ratioAgenda: number
   tasaShow: number
@@ -164,15 +219,17 @@ const metricsByPeriod: Record<Period, PeriodMetrics> = {
   },
 }
 
-function oportunidades(m: FunnelInputs) {
+export function oportunidades(m: FunnelInputs) {
   return m.conversaciones * m.ratioAgenda * m.tasaShow * m.tasaCierre * m.ticketPromedio
 }
 
 const numberFormatter = new Intl.NumberFormat('es-ES')
 const percentFormatter = new Intl.NumberFormat('es-ES', { minimumFractionDigits: 1, maximumFractionDigits: 1 })
 const currencyFormatter = new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 })
+const decimalFormatter = new Intl.NumberFormat('es-ES', { minimumFractionDigits: 1, maximumFractionDigits: 1 })
 
 export function formatEntero(value: number) { return numberFormatter.format(Math.round(value)) }
+export function formatDecimal(value: number) { return decimalFormatter.format(value) }
 export function formatPorcentaje(value: number) { return `${percentFormatter.format(value * 100)} %` }
 export function formatMoneda(value: number) { return currencyFormatter.format(Math.round(value)) }
 
@@ -235,6 +292,8 @@ export const useDashboardStore = defineStore('dashboard', () => {
 
   const isRangeIncomplete = computed(() => period.value === 'Personalizado' && (!customFrom.value || !customTo.value))
 
+  const currentFunnel = computed<FunnelInputs | null>(() => (isRangeIncomplete.value ? null : metricsByPeriod[period.value].current))
+
   const widgets = computed<DashboardWidget[]>(() => {
     if (isRangeIncomplete.value) {
       return WIDGET_SHELL.map((shell, index) => ({
@@ -265,5 +324,110 @@ export const useDashboardStore = defineStore('dashboard', () => {
     ]
   })
 
-  return { period, customFrom, customTo, loading, widgets, setPeriod }
+  return { period, customFrom, customTo, loading, currentFunnel, widgets, setPeriod }
+})
+
+interface ClosedMonth {
+  key: string
+  label: string
+  facturacion: number
+  gasto: number
+}
+
+interface ExpenseEntry {
+  id: number
+  tag: string
+  amount: number
+}
+
+export const useFinanceStore = defineStore('finance', () => {
+  const closedMonths = ref<ClosedMonth[]>([
+    { key: 'sep', label: 'Sep', facturacion: 38400, gasto: 21900 },
+    { key: 'oct', label: 'Oct', facturacion: 40200, gasto: 23100 },
+    { key: 'nov', label: 'Nov', facturacion: 46500, gasto: 27000 },
+    { key: 'dic', label: 'Dic', facturacion: 31200, gasto: 19300 },
+    { key: 'ene', label: 'Ene', facturacion: 42000, gasto: 23900 },
+    { key: 'feb', label: 'Feb', facturacion: 45000, gasto: 25400 },
+    { key: 'mar', label: 'Mar', facturacion: 49500, gasto: 27700 },
+    { key: 'abr', label: 'Abr', facturacion: 55000, gasto: 30200 },
+    { key: 'may', label: 'May', facturacion: 61200, gasto: 32600 },
+    { key: 'jun', label: 'Jun', facturacion: 58000, gasto: 31300 },
+    { key: 'jul', label: 'Jul', facturacion: 44700, gasto: 25900 },
+  ])
+
+  const currentMonthLabel = 'Agosto'
+  const currentMonthFacturacion = ref(54000)
+
+  const expenses = ref<ExpenseEntry[]>([
+    { id: 1, tag: 'Personal / closers', amount: 12400 },
+    { id: 2, tag: 'Publicidad (Meta Ads)', amount: 9800 },
+    { id: 3, tag: 'Comisiones', amount: 4100 },
+    { id: 4, tag: 'Plataformas y software', amount: 3900 },
+    { id: 5, tag: 'Otros', amount: 1300 },
+  ])
+
+  const currentMonthGasto = computed(() => expenses.value.reduce((sum, item) => sum + item.amount, 0))
+  const currentMonthBeneficio = computed(() => currentMonthFacturacion.value - currentMonthGasto.value)
+
+  const allMonths = computed(() => [
+    ...closedMonths.value.map((m) => ({ ...m, beneficio: m.facturacion - m.gasto })),
+    { key: 'ago', label: currentMonthLabel, facturacion: currentMonthFacturacion.value, gasto: currentMonthGasto.value, beneficio: currentMonthBeneficio.value },
+  ])
+
+  const minMonth = computed(() => allMonths.value.reduce((min, m) => (m.facturacion < min.facturacion ? m : min)))
+  const maxMonth = computed(() => allMonths.value.reduce((max, m) => (m.facturacion > max.facturacion ? m : max)))
+
+  // Si la etiqueta ya existe (comparación sin importar mayúsculas),
+  // el monto se suma a esa fila en vez de crear una nueva.
+  function addExpense(tag: string, amount: number) {
+    if (!tag.trim() || !amount || amount <= 0) return
+    const trimmedTag = tag.trim()
+    const existing = expenses.value.find((item) => item.tag.toLowerCase() === trimmedTag.toLowerCase())
+    if (existing) {
+      existing.amount += amount
+    } else {
+      expenses.value.push({ id: Date.now(), tag: trimmedTag, amount })
+    }
+  }
+
+  function removeExpense(id: number) {
+    expenses.value = expenses.value.filter((item) => item.id !== id)
+  }
+
+  const seasonalDips = computed(() => {
+    const months = allMonths.value;
+    const dips: { month: string; vsMonth: string; drop: number }[] = [];
+    for (let i = 1; i < months.length; i++) {
+      const prev = months[i - 1];
+      const curr = months[i];
+      const change = (curr.facturacion - prev.facturacion) / prev.facturacion;
+      if (change < -0.15) dips.push({ month: curr.label, vsMonth: prev.label, drop: -change });
+    }
+    return dips;
+  })
+
+  const closedMonthsCount = computed(() => allMonths.value.length)
+
+  const readingStage = computed<'insuficiente' | 'basica' | 'completa'>(() => {
+    if (closedMonthsCount.value < 3) return 'insuficiente'
+    if (closedMonthsCount.value < 6) return 'basica'
+    return 'completa'
+  })
+
+  return {
+    closedMonths,
+    currentMonthLabel,
+    currentMonthFacturacion,
+    expenses,
+    currentMonthGasto,
+    currentMonthBeneficio,
+    allMonths,
+    minMonth,
+    maxMonth,
+    seasonalDips,
+    closedMonthsCount,
+    readingStage,
+    addExpense,
+    removeExpense,
+  }
 })

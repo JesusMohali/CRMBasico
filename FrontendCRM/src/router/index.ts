@@ -3,6 +3,9 @@ import DashboardOverview from '../components/dashboard/DashboardOverview.vue';
 import SectionView from '../views/SectionView.vue';
 import ChatsLead from '../views/ChatsLead.vue';
 import ConversationsStatus from '../views/ConversationsStatus.vue';
+import AgendasAttendance from '../views/AgendasAttendance.vue';
+import OpportunityDetail from '../views/OpportunityDetail.vue';
+import Finance from '../views/Finance.vue';
 
 const router = createRouter({
 	history: createWebHistory(),
@@ -12,9 +15,9 @@ const router = createRouter({
 		{ path: '/public-profile', component: SectionView, props: { title: 'Public Profile' } },
 		{ path: '/chats', component: ChatsLead },
 		{ path: '/conversaciones', component: ConversationsStatus },
-		{ path: '/agendas', component: SectionView, props: { title: 'Agendas y asistencia' } },
-		{ path: '/oportunidades', component: SectionView, props: { title: 'Detalle de oportunidades' } },
-		{ path: '/finanzas', component: SectionView, props: { title: 'Finanzas' } },
+		{ path: '/agendas', component: AgendasAttendance },
+		{ path: '/oportunidades', component: OpportunityDetail },
+		{ path: '/finanzas', component: Finance },
 		{ path: '/:pathMatch(.*)*', redirect: '/overview' },
 	],
 });
