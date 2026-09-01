@@ -2,7 +2,7 @@
 import { onBeforeUnmount, onMounted, ref } from 'vue';
 import { RouterLink, useRoute, useRouter } from 'vue-router';
 import { useUiStore } from '../../stores';
-import logo from '@/assets/media/app/mini-logo-circle-success.svg';
+import logo from '@/assets/media/app/peak-logo.png';
 const ui = useUiStore();
 const route = useRoute();
 const router = useRouter();
@@ -63,7 +63,7 @@ onBeforeUnmount(() => document.removeEventListener('click', closeUserMenu));
 <template>
 	<aside class="sidebar" :class="{ 'sidebar-open': ui.sidebarOpen, 'sidebar-collapsed': ui.sidebarCollapsed }">
 		<div class="brand">
-			<img :src="logo" alt="Metronic" /><strong>Peak Intelligence</strong
+			<img :src="logo" alt="Peak Intelligence" /><strong>Peak Intelligence</strong
 			><button class="icon-btn close-mobile" @click="ui.sidebarOpen = false"><i class="ki-filled ki-cross" /></button
 			><button class="sidebar-toggle" type="button" title="Colapsar menú" @click="ui.setSidebarCollapsed(!ui.sidebarCollapsed)"><i class="ki-filled ki-black-left-line" /></button>
 		</div>
