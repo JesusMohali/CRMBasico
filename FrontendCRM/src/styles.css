@@ -2723,68 +2723,17 @@ h2 {
 	display: block;
 }
 
-/* ── Calendario del rango personalizado ──────────────────────────── */
 .range-dropdown {
-	width: 260px;
+	width: 620px;
+	max-width: calc(100vw - 40px);
+	max-height: none;
+	overflow: auto;
 	padding: 12px;
-}
-
-.range-header {
-	display: flex;
-	align-items: center;
-	justify-content: space-between;
-	margin-bottom: 10px;
-}
-
-.range-header b {
-	font-size: 13px;
-	text-transform: capitalize;
-}
-
-.range-weekdays {
-	display: grid;
-	grid-template-columns: repeat(7, 1fr);
-	margin-bottom: 4px;
-}
-
-.range-weekdays span {
-	text-align: center;
-	font-size: 10px;
-	color: var(--muted-foreground);
-	padding: 4px 0;
-}
-
-.range-grid {
-	display: grid;
-	grid-template-columns: repeat(7, 1fr);
-	gap: 2px;
-}
-
-.range-day {
-	height: 30px;
-	border-radius: 6px;
-	font-size: 12px;
-	color: var(--text);
-	background: transparent;
-}
-
-.range-day:hover {
-	background: var(--background);
-}
-
-.range-day.outside {
-	color: var(--muted-foreground);
-	opacity: .5;
-}
-
-.range-day.in-range {
-	background: color-mix(in srgb, var(--primary) 14%, transparent);
-	border-radius: 0;
-}
-
-.range-day.selected {
-	background: var(--primary);
-	color: #fff;
+	background: var(--surface);
+	border: 1px solid var(--border);
+	border-radius: 10px;
+	box-shadow: 0 8px 20px #00000030;
+	z-index: 100;
 }
 
 /* ── Hover más visible en las opciones del selector de periodo ──────

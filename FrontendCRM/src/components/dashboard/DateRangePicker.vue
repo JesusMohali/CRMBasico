@@ -1,98 +1,74 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { Calendar, type Options } from 'vanilla-calendar-pro';
 
 const props = defineProps<{ from: string; to: string }>();
 const emit = defineEmits<{ 'update:from': [string]; 'update:to': [string] }>();
 
 const open = ref(false);
 const root = ref<HTMLElement>();
-const today = new Date();
-const viewYear = ref(today.getFullYear());
-const viewMonth = ref(today.getMonth());
+const calendarHost = ref<HTMLElement>();
+let calendar: Calendar | undefined;
 
-const WEEKDAYS = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
-const MONTH_NAMES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
-
-function toIso(date: Date) {
-	return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+function todayIso() {
+	const now = new Date();
+	return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 }
 
-function fromIso(value: string) {
-	if (!value) return null;
-	const [y, m, d] = value.split('-').map(Number);
-	return new Date(y, m - 1, d);
-}
+function initCalendar() {
+	if (!calendarHost.value) return;
+	const initialDates = props.from && props.to ? [props.from, props.to] : props.from ? [props.from] : [];
+	const isDarkMode = document.documentElement.classList.contains('dark');
 
-const monthLabel = computed(() => {
-	const name = MONTH_NAMES[viewMonth.value];
-	return `${name[0].toUpperCase()}${name.slice(1)} ${viewYear.value}`;
-});
+	const options: Partial<Options> = {
+		type: 'multiple',
+		selectionDatesMode: 'multiple-ranged',
+		displayMonthsCount: 2,
+		firstWeekday: 1,
+		locale: 'es',
+		displayDateMax: todayIso(),
+		selectedDates: initialDates,
+		selectedTheme: isDarkMode ? 'dark' : 'light',
+		onClickDate(self) {
+			const dates = self.context.selectedDates;
+			const from = dates[0] ?? '';
+			const to = dates.length > 1 ? dates[dates.length - 1] : '';
+			emit('update:from', from);
+			emit('update:to', to);
+		},
+	};
 
-const days = computed(() => {
-	const firstOfMonth = new Date(viewYear.value, viewMonth.value, 1);
-	const startOffset = (firstOfMonth.getDay() + 6) % 7;
-	const start = new Date(viewYear.value, viewMonth.value, 1 - startOffset);
-	return Array.from({ length: 42 }, (_, i) => {
-		const date = new Date(start);
-		date.setDate(start.getDate() + i);
-		return date;
-	});
-});
-
-const fromDate = computed(() => fromIso(props.from));
-const toDate = computed(() => fromIso(props.to));
-
-function isSameDay(a: Date | null, b: Date | null) {
-	return !!a && !!b && a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
-}
-
-function isInRange(date: Date) {
-	if (!fromDate.value || !toDate.value) return false;
-	return date > fromDate.value && date < toDate.value;
-}
-
-function pickDay(date: Date) {
-	if (!fromDate.value || (fromDate.value && toDate.value)) {
-		emit('update:from', toIso(date));
-		emit('update:to', '');
-	} else if (date < fromDate.value) {
-		emit('update:from', toIso(date));
-		emit('update:to', '');
-	} else {
-		emit('update:to', toIso(date));
-	}
-}
-
-function prevMonth() {
-	if (viewMonth.value === 0) {
-		viewMonth.value = 11;
-		viewYear.value -= 1;
-	} else {
-		viewMonth.value -= 1;
-	}
-}
-
-function nextMonth() {
-	if (viewMonth.value === 11) {
-		viewMonth.value = 0;
-		viewYear.value += 1;
-	} else {
-		viewMonth.value += 1;
-	}
+	// La librería acepta la referencia del elemento directamente (patrón
+	// oficial de su propia guía de integración con Vue) — no hace falta
+	// armar un id + selector de texto.
+	calendar = new Calendar(calendarHost.value, options);
+	calendar.init();
 }
 
 const triggerLabel = computed(() => {
-	if (!fromDate.value) return 'Elegir fechas';
-	const format = (d: Date) => `${d.getDate()} ${MONTH_NAMES[d.getMonth()].slice(0, 3)} ${d.getFullYear()}`;
-	return toDate.value ? `${format(fromDate.value)} – ${format(toDate.value)}` : `${format(fromDate.value)} – …`;
+	if (!props.from) return 'Elegir fechas';
+	const short = (iso: string) => {
+		const [y, m, d] = iso.split('-');
+		return `${d}/${m}/${y}`;
+	};
+	return props.to ? `${short(props.from)} – ${short(props.to)}` : `${short(props.from)} – …`;
 });
 
 function closeOnOutsideClick(event: MouseEvent) {
 	if (root.value && !root.value.contains(event.target as Node)) open.value = false;
 }
 
+watch(open, (isOpen) => {
+	calendar?.destroy();
+	calendar = undefined;
+	if (isOpen) nextTick(initCalendar);
+});
+
 onMounted(() => document.addEventListener('click', closeOnOutsideClick));
-onBeforeUnmount(() => document.removeEventListener('click', closeOnOutsideClick));
+onBeforeUnmount(() => {
+	document.removeEventListener('click', closeOnOutsideClick);
+	calendar?.destroy();
+});
 </script>
 
 <template>
@@ -103,27 +79,7 @@ onBeforeUnmount(() => document.removeEventListener('click', closeOnOutsideClick)
 		</button>
 		<Transition name="menu-pop">
 			<div v-if="open" class="kt-menu-dropdown date-dropdown range-dropdown">
-				<div class="range-header">
-					<button class="icon-btn" type="button" @click="prevMonth"><i class="ki-filled ki-left" /></button>
-					<b>{{ monthLabel }}</b>
-					<button class="icon-btn" type="button" @click="nextMonth"><i class="ki-filled ki-right" /></button>
-				</div>
-				<div class="range-weekdays"><span v-for="day in WEEKDAYS" :key="day">{{ day }}</span></div>
-				<div class="range-grid">
-					<button
-						v-for="date in days"
-						:key="date.toISOString()"
-						type="button"
-						class="range-day"
-						:class="{
-							outside: date.getMonth() !== viewMonth,
-							selected: isSameDay(date, fromDate) || isSameDay(date, toDate),
-							'in-range': isInRange(date),
-						}"
-						@click="pickDay(date)">
-						{{ date.getDate() }}
-					</button>
-				</div>
+				<div ref="calendarHost" />
 			</div>
 		</Transition>
 	</div>

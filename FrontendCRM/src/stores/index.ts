@@ -1,4 +1,4 @@
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { defineStore } from 'pinia'
 import { FASES, type Fase } from '../constants/fases'
 
@@ -64,6 +64,11 @@ interface FunnelInputs {
 interface PeriodMetrics {
   current: FunnelInputs
   previous: FunnelInputs
+  // true cuando el ticket promedio y/o la tasa de cierre de este
+  // periodo no salen de histórico real sino que los cargó el usuario
+  // a mano en Ajustes (todavía no existe esa pantalla, pero el spec
+  // pide que el widget avise cuando está pasando).
+  estimado?: boolean
 }
 
 // Datos de ejemplo por periodo. "Oportunidades" nunca se tipea a mano:
@@ -79,6 +84,9 @@ const metricsByPeriod: Record<Period, PeriodMetrics> = {
   '7 días': {
     current: { conversaciones: 310, ratioAgenda: 0.198, tasaShow: 0.60, tasaCierre: 0.25, ticketPromedio: 1800, facturacion: 12600 },
     previous: { conversaciones: 268, ratioAgenda: 0.184, tasaShow: 0.57, tasaCierre: 0.24, ticketPromedio: 1780, facturacion: 11400 },
+    // Poco histórico todavía para 7 días — ticket y tasa de cierre
+    // son valores manuales, no calculados de ventas reales.
+    estimado: true,
   },
   '30 días': {
     current: { conversaciones: 1240, ratioAgenda: 0.200, tasaShow: 0.60, tasaCierre: 0.25, ticketPromedio: 1800, facturacion: 54000 },
@@ -96,9 +104,9 @@ const metricsByPeriod: Record<Period, PeriodMetrics> = {
     current: { conversaciones: 14800, ratioAgenda: 0.220, tasaShow: 0.64, tasaCierre: 0.28, ticketPromedio: 1900, facturacion: 712000 },
     previous: { conversaciones: 12100, ratioAgenda: 0.201, tasaShow: 0.61, tasaCierre: 0.26, ticketPromedio: 1830, facturacion: 584000 },
   },
-  // Sin backend todavía: reutiliza el ejemplo de 30 días. El rango de
-  // fechas que elige el usuario queda guardado (customFrom/customTo)
-  // pero todavía no dispara un cálculo propio.
+  // Sin backend todavía: reutiliza el ejemplo de 30 días una vez que
+  // el usuario elige un rango completo (ver el estado "sin datos" más
+  // abajo, para mientras el rango está incompleto).
   Personalizado: {
     current: { conversaciones: 1240, ratioAgenda: 0.200, tasaShow: 0.60, tasaCierre: 0.25, ticketPromedio: 1800, facturacion: 54000 },
     previous: { conversaciones: 1049, ratioAgenda: 0.176, tasaShow: 0.58, tasaCierre: 0.235, ticketPromedio: 1780, facturacion: 49500 },
@@ -117,8 +125,11 @@ export function formatEntero(value: number) { return numberFormatter.format(Math
 export function formatPorcentaje(value: number) { return `${percentFormatter.format(value * 100)} %` }
 export function formatMoneda(value: number) { return currencyFormatter.format(Math.round(value)) }
 
+// Denominador cero nunca imprime NaN: si no hay periodo anterior con
+// qué comparar, se muestra "—" en vez de una variación inventada.
 function formatDelta(actual: number, anterior: number, suffix: '%' | 'pts', enPuntos = false) {
-  const delta = enPuntos ? (actual - anterior) * 100 : anterior === 0 ? 0 : ((actual - anterior) / anterior) * 100
+  if (!enPuntos && anterior === 0) return { label: '—', negative: false }
+  const delta = enPuntos ? (actual - anterior) * 100 : ((actual - anterior) / anterior) * 100
   const signo = delta >= 0 ? '+' : ''
   return { label: `${signo}${percentFormatter.format(delta)} ${suffix}`, negative: delta < 0 }
 }
@@ -129,9 +140,12 @@ export interface DashboardWidget {
   icon: string
   color: string
   chart: string
+  empty: boolean
+  emptyReason: string
   valueLabel: string
   deltaLabel: string
   negative: boolean
+  estimado?: boolean
 }
 
 const CHART_PATHS = [
@@ -141,13 +155,56 @@ const CHART_PATHS = [
   'M0,30 L9,26 L18,29 L27,21 L36,25 L45,16 L55,20 L64,10 L73,15 L82,6 L91,10 L100,4',
 ]
 
+const WIDGET_SHELL = [
+  { key: 'conversaciones', label: 'Conversaciones abiertas', icon: 'ki-messages', color: '#635bff' },
+  { key: 'ratioAgenda', label: 'Ratio conversación → agenda', icon: 'ki-calendar-tick', color: '#10a7a7' },
+  { key: 'oportunidades', label: 'Oportunidades', icon: 'ki-chart-pie-simple', color: '#2b91e8' },
+  { key: 'facturacion', label: 'Facturación', icon: 'ki-wallet', color: '#e9a11b' },
+] as const
+
 export const useDashboardStore = defineStore('dashboard', () => {
   const period = ref<Period>('30 días')
   const customFrom = ref('')
   const customTo = ref('')
+  // Simula el tiempo de un GET /metrics/overview real. Cuando exista
+  // el backend, este flag pasa a controlarse desde ahí — el resto de
+  // la UI (el esqueleto de CardInfo) no necesita cambiar.
+  const loading = ref(false)
+
+  function simulateFetch() {
+    loading.value = true
+    window.setTimeout(() => { loading.value = false }, 500)
+  }
+
+  function setPeriod(value: Period) {
+    period.value = value
+    simulateFetch()
+  }
+
+  // Si el usuario completa un rango personalizado (pasa de tener una
+  // fecha suelta o ninguna a tener las dos), también se simula la
+  // carga — es el momento en que un backend real dispararía el fetch.
+  watch([customFrom, customTo], ([from, to], [prevFrom, prevTo]) => {
+    const completedNow = from && to && !(prevFrom && prevTo)
+    if (completedNow) simulateFetch()
+  })
+
+  const isRangeIncomplete = computed(() => period.value === 'Personalizado' && (!customFrom.value || !customTo.value))
 
   const widgets = computed<DashboardWidget[]>(() => {
-    const { current, previous } = metricsByPeriod[period.value]
+    if (isRangeIncomplete.value) {
+      return WIDGET_SHELL.map((shell, index) => ({
+        ...shell,
+        chart: CHART_PATHS[index],
+        empty: true,
+        emptyReason: 'Elegí un rango de fechas para ver este dato.',
+        valueLabel: '',
+        deltaLabel: '',
+        negative: false,
+      }))
+    }
+
+    const { current, previous, estimado } = metricsByPeriod[period.value]
     const oportunidadesActual = oportunidades(current)
     const oportunidadesAnterior = oportunidades(previous)
 
@@ -157,14 +214,12 @@ export const useDashboardStore = defineStore('dashboard', () => {
     const dFacturacion = formatDelta(current.facturacion, previous.facturacion, '%')
 
     return [
-      { key: 'conversaciones', label: 'Conversaciones abiertas', icon: 'ki-messages', color: '#635bff', chart: CHART_PATHS[0], valueLabel: formatEntero(current.conversaciones), deltaLabel: dConversaciones.label, negative: dConversaciones.negative },
-      { key: 'ratioAgenda', label: 'Ratio conversación → agenda', icon: 'ki-calendar-tick', color: '#10a7a7', chart: CHART_PATHS[1], valueLabel: formatPorcentaje(current.ratioAgenda), deltaLabel: dRatio.label, negative: dRatio.negative },
-      { key: 'oportunidades', label: 'Oportunidades', icon: 'ki-chart-pie-simple', color: '#2b91e8', chart: CHART_PATHS[2], valueLabel: formatMoneda(oportunidadesActual), deltaLabel: dOportunidades.label, negative: dOportunidades.negative },
-      { key: 'facturacion', label: 'Facturación', icon: 'ki-wallet', color: '#e9a11b', chart: CHART_PATHS[3], valueLabel: formatMoneda(current.facturacion), deltaLabel: dFacturacion.label, negative: dFacturacion.negative },
+      { ...WIDGET_SHELL[0], chart: CHART_PATHS[0], empty: false, emptyReason: '', valueLabel: formatEntero(current.conversaciones), deltaLabel: dConversaciones.label, negative: dConversaciones.negative },
+      { ...WIDGET_SHELL[1], chart: CHART_PATHS[1], empty: false, emptyReason: '', valueLabel: formatPorcentaje(current.ratioAgenda), deltaLabel: dRatio.label, negative: dRatio.negative },
+      { ...WIDGET_SHELL[2], chart: CHART_PATHS[2], empty: false, emptyReason: '', valueLabel: formatMoneda(oportunidadesActual), deltaLabel: dOportunidades.label, negative: dOportunidades.negative, estimado },
+      { ...WIDGET_SHELL[3], chart: CHART_PATHS[3], empty: false, emptyReason: '', valueLabel: formatMoneda(current.facturacion), deltaLabel: dFacturacion.label, negative: dFacturacion.negative },
     ]
   })
 
-  function setPeriod(value: Period) { period.value = value }
-
-  return { period, customFrom, customTo, widgets, setPeriod }
+  return { period, customFrom, customTo, loading, widgets, setPeriod }
 })

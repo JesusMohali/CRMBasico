@@ -1,4 +1,6 @@
 @import 'vanilla-calendar-pro/styles/layout.css';
+@import 'vanilla-calendar-pro/styles/themes/light.css';
+@import 'vanilla-calendar-pro/styles/themes/dark.css';
 
 /* ============================================
    Date Picker Theme Customization

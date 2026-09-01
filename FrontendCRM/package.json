@@ -12,6 +12,7 @@
     "@keenthemes/ktui": "^1.2.4",
     "apexcharts": "^4.7.0",
     "pinia": "^3.0.3",
+    "vanilla-calendar-pro": "^3.3.1",
     "vue": "^3.5.13",
     "vue-router": "^4.6.4"
   },
