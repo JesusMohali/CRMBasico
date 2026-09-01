@@ -8,7 +8,13 @@
 			</div>
 		</template>
 		<template v-else>
-			<article v-for="(card, index) in dashboard.widgets" :key="card.key" class="crm-stat-card" :style="{ '--card-color': card.color }">
+			<component
+				:is="card.empty ? 'article' : 'RouterLink'"
+				v-for="(card, index) in dashboard.widgets"
+				:key="card.key"
+				:to="card.empty ? undefined : card.route"
+				class="crm-stat-card"
+				:style="{ '--card-color': card.color }">
 				<div v-if="card.empty" class="crm-stat-empty">
 					<i class="ki-filled ki-calendar-search" aria-hidden="true" />
 					<p>{{ card.emptyReason }}</p>
@@ -40,7 +46,7 @@
 						<path :d="card.chart" fill="none" stroke="var(--card-color)" stroke-width="1.5" vector-effect="non-scaling-stroke" />
 					</svg>
 				</template>
-			</article>
+			</component>
 		</template>
 	</div>
 </template>
@@ -60,6 +66,7 @@ const dashboard = useDashboardStore();
 
 .crm-stat-card {
 	position: relative;
+	display: block;
 	min-width: 0;
 	overflow: hidden;
 	min-height: 176px;
@@ -67,6 +74,8 @@ const dashboard = useDashboardStore();
 	border: 1px solid var(--border);
 	border-radius: 8px;
 	box-shadow: 0 2px 5px #1d29390d;
+	color: inherit;
+	text-decoration: none;
 	transition: border-color .2s ease, box-shadow .2s ease, transform .2s ease;
 }
 
