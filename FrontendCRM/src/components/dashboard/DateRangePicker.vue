@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
-import { Calendar, type Options } from 'vanilla-calendar-pro';
+import { Calendar, type FormatDateString, type Options } from 'vanilla-calendar-pro';
 
 const props = defineProps<{ from: string; to: string }>();
 const emit = defineEmits<{ 'update:from': [string]; 'update:to': [string] }>();
@@ -10,9 +10,12 @@ const root = ref<HTMLElement>();
 const calendarHost = ref<HTMLElement>();
 let calendar: Calendar | undefined;
 
-function todayIso() {
+// displayDateMax no acepta un string cualquiera: la libreria lo tipa como
+// `${number}-${MM}-${DD}`. El valor que arma padStart() ya tiene ese formato, pero
+// TypeScript no lo puede inferir de una plantilla, de ahi la asercion.
+function todayIso(): FormatDateString {
 	const now = new Date();
-	return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+	return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}` as FormatDateString;
 }
 
 function initCalendar() {
