@@ -23,7 +23,7 @@ function toggleAll() {
 				<p>Estado de los últimos X leads</p>
 			</div>
 			<div class="table-tools">
-				<label class="search-field">⌕<input placeholder="Buscar leads" :value="teams.query" @input="handleSearch" /></label
+				<label class="search-field">⌕<input placeholder="Escribe para buscar..." :value="teams.query" @input="handleSearch" /></label
 				><!-- <button class="kt-btn kt-btn-secondary">Export</button> -->
 			</div>
 		</div>
@@ -32,8 +32,8 @@ function toggleAll() {
 				<thead>
 					<tr>
 						<!-- <th><input type="checkbox" :checked="allSelected" @change="toggleAll" /></th> -->
+						<th>Nombre completo</th>
 						<th>Usuario</th>
-						<th>Calificación</th>
 						<th>Última Actualización</th>
 						<th>Fase</th>
 					</tr>
@@ -42,9 +42,9 @@ function toggleAll() {
 					<tr v-for="team in teams.visible" :key="team.id">
 						<!-- <td><input type="checkbox" :checked="teams.selected.includes(team.id)" @change="teams.toggle(team.id)" /></td> -->
 						<td>
-							<div class="team-name"><span class="team-mark">{{ team.name.slice(0, 1) }}</span><div><b>{{ team.name }}</b><small>{{ team.description }}</small></div></div>
+							<div class="team-name"><span class="team-mark">{{ team.name.slice(0, 1) }}</span><div><b>{{ team.name }}</b><small>{{ team.email }}</small></div></div>
 						</td>
-						<td><span class="rating"><i v-for="index in 5" :key="index" class="ki-solid ki-star" :class="{ off: index > team.rating }" /></span></td>
+						<td>{{ team.user }}</td>
 						<td>{{ team.updated }}</td>
 						<td><span class="kt-badge fase-badge" :style="{ '--fase-color': FASE_COLORS[team.phase] }">{{ team.phase }}</span></td>
 						<!-- <span class="kt-badge kt-badge-warning kt-badge-sm rounded-full gap-1">

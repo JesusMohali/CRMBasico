@@ -18,11 +18,10 @@ export const useUiStore = defineStore('ui', () => {
 interface Lead {
   id: number
   name: string
-  description: string
-  rating: number
+  email: string
+  user: string
   updated: string
   phase: Fase
-  members: number
 }
 
 export const useTeamsStore = defineStore('teams', () => {
@@ -30,14 +29,33 @@ export const useTeamsStore = defineStore('teams', () => {
   const page = ref(1)
   const selected = ref<number[]>([])
   const teams = ref<Lead[]>([
-    { id: 1, name: 'Jesús Mohali', description: 'Podriamos colocar el último mensaje', rating: 5, updated: '21 Oct, 2024', phase: 'Llamada', members: 10, },
-    { id: 2, name: 'Diana Lozano', description: 'O de donde escriben', rating: 3.5, updated: '15 Oct, 2024', phase: 'Situación', members: 2, },
-    { id: 3, name: 'Rodri Buero', description: 'O alguna descripción', rating: 5, updated: '10 Oct, 2024', phase: 'Compromiso', members: 10, },
-    { id: 4, name: 'Miguel Garrido', description: 'Sino se lo quitamos y ya', rating: 5, updated: '05 Oct, 2024', phase: 'Link', members: 2, },
-    { id: 5, name: 'Carlos Lozano', description: 'Software engineering & delivery', rating: 4, updated: '28 Sep, 2024', phase: 'Obstáculo', members: 6, },
-    { id: 6, name: 'Diego Álvarez', description: 'Support and customer experience', rating: 4, updated: '21 Sep, 2024', phase: 'Objeción', members: 5, },
+    { id: 1, name: 'Jesús Mohali', email: 'jesus.mohali@example.com', user: 'jesus.mohali', updated: '21 Oct, 2024', phase: 'Llamada', },
+    { id: 2, name: 'Diana Lozano', email: 'diana.lozano@example.com', user: 'diana.lozano', updated: '15 Oct, 2024', phase: 'Situación', },
+    { id: 3, name: 'Rodri Buero', email: 'rodrigo.buero@example.com', user: 'rodrigo.buero', updated: '10 Oct, 2024', phase: 'Compromiso', },
+    { id: 4, name: 'Miguel Garrido', email: 'miguel.garrido@example.com', user: 'miguel.garrido', updated: '05 Oct, 2024', phase: 'Link', },
+    { id: 5, name: 'Carlos Lozano', email: 'carlos.lozano@example.com', user: 'carlos.lozano', updated: '28 Sep, 2024', phase: 'Obstáculo', },
+    { id: 6, name: 'Diego Álvarez', email: 'diego.alvarez@example.com', user: 'diego.alvarez', updated: '21 Sep, 2024', phase: 'Objeción', },
+    { id: 7, name: 'Lucía Fernández', email: 'lucia.fernandez@example.com', user: 'lucia.fernandez', updated: '15 Sep, 2024', phase: 'Compromiso', },
+    { id: 8, name: 'Javier Martínez', email: 'javier.martinez@example.com', user: 'javier.martinez', updated: '10 Sep, 2024', phase: 'Situación', },
+    { id: 9, name: 'Ana Gómez', email: 'ana.gomez@example.com', user: 'ana.gomez', updated: '05 Sep, 2024', phase: 'Llamada', },
+    { id: 10, name: 'Sofía Ramírez', email: 'sofia.ramirez@example.com', user: 'sofia.ramirez', updated: '28 Sep, 2024', phase: 'Situación', },
   ])
-  const filtered = computed(() => teams.value.filter(team => team.name.toLowerCase().includes(query.value.toLowerCase()) || team.phase.toLowerCase().includes(query.value.toLowerCase())))
+  const filtered = computed(() => {
+    const search = query.value.trim().toLowerCase()
+    if (!search) return teams.value
+
+    return teams.value.filter(team => {
+      const haystack = [
+        team.name,
+        team.email,
+        team.user,
+        team.updated,
+        team.phase,
+      ].join(' ').toLowerCase()
+
+      return haystack.includes(search)
+    })
+  })
   const pages = computed(() => Math.max(1, Math.ceil(filtered.value.length / 5)))
   const visible = computed(() => filtered.value.slice((page.value - 1) * 5, page.value * 5))
   // Cuenta de leads por fase, para el gráfico de dona del dashboard.
