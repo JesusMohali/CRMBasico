@@ -2746,3 +2746,59 @@ h2 {
 	background: color-mix(in srgb, var(--primary) 12%, transparent);
 	color: var(--primary);
 }
+
+/* ── Fase 2 · Estado de las conversaciones ───────────────────────── */
+.status-summary {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 10px;
+	margin-bottom: 18px;
+}
+
+.status-pill {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 9px 14px;
+	border: 1px solid var(--border);
+	border-radius: 999px;
+	background: var(--surface);
+	color: var(--text);
+	font-size: 12px;
+}
+
+.status-pill b {
+	font-size: 12px;
+}
+
+.status-pill.active {
+	background: color-mix(in srgb, var(--status-color, var(--primary)) 16%, transparent);
+	border-color: var(--status-color, var(--primary));
+	color: var(--status-color, var(--primary));
+	font-weight: 600;
+}
+
+.conv-status-badge {
+	display: inline-block;
+	padding: 4px 9px;
+	border-radius: 999px;
+	background: color-mix(in srgb, var(--status-color) 16%, transparent);
+	color: var(--status-color);
+	border: 1px solid color-mix(in srgb, var(--status-color) 30%, transparent);
+	font-size: 11px;
+	font-weight: 600;
+}
+
+.table-empty {
+	text-align: center;
+	padding: 24px;
+	color: var(--muted-foreground);
+	font-size: 12px;
+}
+
+/* ── Botón de volver en páginas que no están en el sidebar ───────── */
+.page-heading {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+}

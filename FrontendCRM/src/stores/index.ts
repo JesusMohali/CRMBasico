@@ -58,13 +58,64 @@ export const useTeamsStore = defineStore('teams', () => {
   })
   const pages = computed(() => Math.max(1, Math.ceil(filtered.value.length / 5)))
   const visible = computed(() => filtered.value.slice((page.value - 1) * 5, page.value * 5))
-  // Cuenta de leads por fase, para el gráfico de dona del dashboard.
-  // Sale de la misma lista que alimenta la tabla — un solo origen de
-  // datos para los dos.
   const byFase = computed(() => FASES.map(fase => ({ fase, total: teams.value.filter(team => team.phase === fase).length })))
   function search(value: string) { query.value = value; page.value = 1 }
   function toggle(id: number) { selected.value = selected.value.includes(id) ? selected.value.filter(item => item !== id) : [...selected.value, id] }
   return { query, page, selected, teams, filtered, pages, visible, byFase, search, toggle }
+})
+
+export type ConversationStatus = 'Nueva' | 'En conversación' | 'Esperando respuesta' | 'Agendada' | 'Descartada'
+
+export const CONVERSATION_STATUSES: ConversationStatus[] = ['Nueva', 'En conversación', 'Esperando respuesta', 'Agendada', 'Descartada']
+
+export const CONVERSATION_STATUS_COLORS: Record<ConversationStatus, string> = {
+  Nueva: '#2b91e8',
+  'En conversación': '#635bff',
+  'Esperando respuesta': '#e9a11b',
+  Agendada: '#10a7a7',
+  Descartada: '#ef4444',
+}
+
+interface ConversationRecord {
+  id: number
+  name: string
+  channel: string
+  status: ConversationStatus
+  antiguedad: string
+  updated: string
+  discardReason?: string
+  chatId?: number
+}
+
+export const useConversationsStore = defineStore('conversationsStatus', () => {
+  const query = ref('')
+  const statusFilter = ref<ConversationStatus | 'Todas'>('Todas')
+
+  const conversations = ref<ConversationRecord[]>([
+    { id: 1, name: 'Sarah Chen', channel: 'Instagram', status: 'Agendada', antiguedad: '2 días', updated: '21 Oct, 2024', chatId: 1 },
+    { id: 2, name: 'Marcus Johnson', channel: 'Instagram', status: 'En conversación', antiguedad: '5 horas', updated: '20 Oct, 2024', chatId: 2 },
+    { id: 3, name: 'Alex Rivera', channel: 'Instagram', status: 'Nueva', antiguedad: '1 hora', updated: '19 Oct, 2024', chatId: 3 },
+    { id: 4, name: 'Priya Sharma', channel: 'Instagram', status: 'Esperando respuesta', antiguedad: '1 día', updated: '18 Oct, 2024', chatId: 5 },
+    { id: 5, name: 'Laura Fernández', channel: 'Instagram', status: 'Descartada', antiguedad: '4 días', updated: '17 Oct, 2024', discardReason: 'No calificó' },
+    { id: 6, name: 'Diego Salas', channel: 'Instagram', status: 'Descartada', antiguedad: '6 días', updated: '16 Oct, 2024', discardReason: 'No respondió' },
+    { id: 7, name: 'Valentina Ríos', channel: 'Instagram', status: 'Nueva', antiguedad: '20 minutos', updated: '21 Oct, 2024' },
+    { id: 8, name: 'Tomás Herrera', channel: 'Instagram', status: 'En conversación', antiguedad: '3 horas', updated: '21 Oct, 2024' },
+  ])
+
+  const filtered = computed(() => conversations.value.filter((item) =>
+    (statusFilter.value === 'Todas' || item.status === statusFilter.value) &&
+    item.name.toLowerCase().includes(query.value.toLowerCase())
+  ))
+
+  const countsByStatus = computed(() => CONVERSATION_STATUSES.map((status) => ({
+    status,
+    total: conversations.value.filter((item) => item.status === status).length,
+  })))
+
+  function search(value: string) { query.value = value }
+  function setStatusFilter(value: ConversationStatus | 'Todas') { statusFilter.value = value }
+
+  return { query, statusFilter, conversations, filtered, countsByStatus, search, setStatusFilter }
 })
 
 export const PERIODS = ['7 días', '30 días', '90 días', '6 meses', '1 año', 'Personalizado'] as const
@@ -82,28 +133,13 @@ interface FunnelInputs {
 interface PeriodMetrics {
   current: FunnelInputs
   previous: FunnelInputs
-  // true cuando el ticket promedio y/o la tasa de cierre de este
-  // periodo no salen de histórico real sino que los cargó el usuario
-  // a mano en Ajustes (todavía no existe esa pantalla, pero el spec
-  // pide que el widget avise cuando está pasando).
   estimado?: boolean
 }
 
-// Datos de ejemplo por periodo. "Oportunidades" nunca se tipea a mano:
-// siempre sale de correr oportunidades() sobre estos factores, tanto
-// para el periodo actual como para el anterior — así la variación que
-// se muestra también queda calculada, no inventada. Los valores de
-// "30 días" respetan el ejemplo del propio brief del cliente
-// (1.240 conversaciones · 20,0 % agenda · 60 % show · 25 % cierre ·
-// 1.800 € de ticket = 66.960 €).
-// Cuando haya backend, este objeto se reemplaza por la respuesta de
-// GET /metrics/overview.
 const metricsByPeriod: Record<Period, PeriodMetrics> = {
   '7 días': {
     current: { conversaciones: 310, ratioAgenda: 0.198, tasaShow: 0.60, tasaCierre: 0.25, ticketPromedio: 1800, facturacion: 12600 },
     previous: { conversaciones: 268, ratioAgenda: 0.184, tasaShow: 0.57, tasaCierre: 0.24, ticketPromedio: 1780, facturacion: 11400 },
-    // Poco histórico todavía para 7 días — ticket y tasa de cierre
-    // son valores manuales, no calculados de ventas reales.
     estimado: true,
   },
   '30 días': {
@@ -122,9 +158,6 @@ const metricsByPeriod: Record<Period, PeriodMetrics> = {
     current: { conversaciones: 14800, ratioAgenda: 0.220, tasaShow: 0.64, tasaCierre: 0.28, ticketPromedio: 1900, facturacion: 712000 },
     previous: { conversaciones: 12100, ratioAgenda: 0.201, tasaShow: 0.61, tasaCierre: 0.26, ticketPromedio: 1830, facturacion: 584000 },
   },
-  // Sin backend todavía: reutiliza el ejemplo de 30 días una vez que
-  // el usuario elige un rango completo (ver el estado "sin datos" más
-  // abajo, para mientras el rango está incompleto).
   Personalizado: {
     current: { conversaciones: 1240, ratioAgenda: 0.200, tasaShow: 0.60, tasaCierre: 0.25, ticketPromedio: 1800, facturacion: 54000 },
     previous: { conversaciones: 1049, ratioAgenda: 0.176, tasaShow: 0.58, tasaCierre: 0.235, ticketPromedio: 1780, facturacion: 49500 },
@@ -143,8 +176,6 @@ export function formatEntero(value: number) { return numberFormatter.format(Math
 export function formatPorcentaje(value: number) { return `${percentFormatter.format(value * 100)} %` }
 export function formatMoneda(value: number) { return currencyFormatter.format(Math.round(value)) }
 
-// Denominador cero nunca imprime NaN: si no hay periodo anterior con
-// qué comparar, se muestra "—" en vez de una variación inventada.
 function formatDelta(actual: number, anterior: number, suffix: '%' | 'pts', enPuntos = false) {
   if (!enPuntos && anterior === 0) return { label: '—', negative: false }
   const delta = enPuntos ? (actual - anterior) * 100 : ((actual - anterior) / anterior) * 100
@@ -157,6 +188,7 @@ export interface DashboardWidget {
   label: string
   icon: string
   color: string
+  route: string
   chart: string
   empty: boolean
   emptyReason: string
@@ -174,19 +206,16 @@ const CHART_PATHS = [
 ]
 
 const WIDGET_SHELL = [
-  { key: 'conversaciones', label: 'Conversaciones abiertas', icon: 'ki-messages', color: '#635bff' },
-  { key: 'ratioAgenda', label: 'Ratio conversación → agenda', icon: 'ki-calendar-tick', color: '#10a7a7' },
-  { key: 'oportunidades', label: 'Oportunidades', icon: 'ki-chart-pie-simple', color: '#2b91e8' },
-  { key: 'facturacion', label: 'Facturación', icon: 'ki-wallet', color: '#e9a11b' },
+  { key: 'conversaciones', label: 'Conversaciones abiertas', icon: 'ki-messages', color: '#635bff', route: '/conversaciones' },
+  { key: 'ratioAgenda', label: 'Ratio conversación → agenda', icon: 'ki-calendar-tick', color: '#10a7a7', route: '/agendas' },
+  { key: 'oportunidades', label: 'Oportunidades', icon: 'ki-chart-pie-simple', color: '#2b91e8', route: '/oportunidades' },
+  { key: 'facturacion', label: 'Facturación', icon: 'ki-wallet', color: '#e9a11b', route: '/finanzas' },
 ] as const
 
 export const useDashboardStore = defineStore('dashboard', () => {
   const period = ref<Period>('30 días')
   const customFrom = ref('')
   const customTo = ref('')
-  // Simula el tiempo de un GET /metrics/overview real. Cuando exista
-  // el backend, este flag pasa a controlarse desde ahí — el resto de
-  // la UI (el esqueleto de CardInfo) no necesita cambiar.
   const loading = ref(false)
 
   function simulateFetch() {
@@ -199,9 +228,6 @@ export const useDashboardStore = defineStore('dashboard', () => {
     simulateFetch()
   }
 
-  // Si el usuario completa un rango personalizado (pasa de tener una
-  // fecha suelta o ninguna a tener las dos), también se simula la
-  // carga — es el momento en que un backend real dispararía el fetch.
   watch([customFrom, customTo], ([from, to], [prevFrom, prevTo]) => {
     const completedNow = from && to && !(prevFrom && prevTo)
     if (completedNow) simulateFetch()
