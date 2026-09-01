@@ -1,50 +1,53 @@
 <template>
 	<div class="crm-stats-grid">
-		<article v-for="(card, index) in cards" :key="card.label" class="crm-stat-card" :style="{ '--card-color': card.color }">
-			<div class="crm-stat-content">
-				<div>
-					<p class="crm-stat-label">{{ card.label }}</p>
-					<p class="crm-stat-value">{{ card.value }}</p>
-					<div class="crm-stat-change" :class="{ negative: card.negative }">
-						<i class="ki-filled" :class="card.negative ? 'ki-arrow-down' : 'ki-arrow-up'" aria-hidden="true" />
-						<span>{{ card.change }}</span>
-					</div>
-				</div>
-				<div class="crm-stat-icon" aria-hidden="true">
-					<i class="ki-filled" :class="card.icon" />
-				</div>
+		<template v-if="dashboard.loading">
+			<div v-for="index in 4" :key="`skeleton-${index}`" class="crm-stat-skeleton" aria-hidden="true">
+				<span class="skeleton-line w-60" />
+				<span class="skeleton-line w-40 tall" />
+				<span class="skeleton-line w-30" />
 			</div>
-			<svg class="crm-stat-chart" viewBox="0 0 100 40" preserveAspectRatio="none" aria-hidden="true">
-				<defs>
-					<linearGradient :id="`crm-stat-gradient-${index}`" x1="0" y1="0" x2="0" y2="1">
-						<stop offset="0%" stop-color="var(--card-color)" stop-opacity=".18" />
-						<stop offset="100%" stop-color="var(--card-color)" stop-opacity="0" />
-					</linearGradient>
-				</defs>
-				<path :d="`${card.chart} L100,40 L0,40 Z`" :fill="`url(#crm-stat-gradient-${index})`" />
-				<path :d="card.chart" fill="none" stroke="var(--card-color)" stroke-width="1.5" vector-effect="non-scaling-stroke" />
-			</svg>
-		</article>
+		</template>
+		<template v-else>
+			<article v-for="(card, index) in dashboard.widgets" :key="card.key" class="crm-stat-card" :style="{ '--card-color': card.color }">
+				<div v-if="card.empty" class="crm-stat-empty">
+					<i class="ki-filled ki-calendar-search" aria-hidden="true" />
+					<p>{{ card.emptyReason }}</p>
+				</div>
+				<template v-else>
+					<div class="crm-stat-content">
+						<div>
+							<p class="crm-stat-label">
+								{{ card.label }}<span v-if="card.estimado" class="crm-stat-estimated" title="Ticket promedio y tasa de cierre cargados a mano, todavía sin histórico suficiente">Estimado</span>
+							</p>
+							<p class="crm-stat-value">{{ card.valueLabel }}</p>
+							<div class="crm-stat-change" :class="{ negative: card.negative }">
+								<i class="ki-filled" :class="card.negative ? 'ki-arrow-down' : 'ki-arrow-up'" aria-hidden="true" />
+								<span>{{ card.deltaLabel }}</span>
+							</div>
+						</div>
+						<div class="crm-stat-icon" aria-hidden="true">
+							<i class="ki-filled" :class="card.icon" />
+						</div>
+					</div>
+					<svg class="crm-stat-chart" viewBox="0 0 100 40" preserveAspectRatio="none" aria-hidden="true">
+						<defs>
+							<linearGradient :id="`crm-stat-gradient-${index}`" x1="0" y1="0" x2="0" y2="1">
+								<stop offset="0%" stop-color="var(--card-color)" stop-opacity=".18" />
+								<stop offset="100%" stop-color="var(--card-color)" stop-opacity="0" />
+							</linearGradient>
+						</defs>
+						<path :d="`${card.chart} L100,40 L0,40 Z`" :fill="`url(#crm-stat-gradient-${index})`" />
+						<path :d="card.chart" fill="none" stroke="var(--card-color)" stroke-width="1.5" vector-effect="non-scaling-stroke" />
+					</svg>
+				</template>
+			</article>
+		</template>
 	</div>
 </template>
 
 <script setup lang="ts">
-type StatCard = {
-	label: string
-	value: string
-	change: string
-	negative?: boolean
-	icon: string
-	color: string
-	chart: string
-}
-
-const cards: StatCard[] = [
-	{ label: 'Leads (24h)', value: '200', change: '+12.4%', icon: 'ki-briefcase', color: '#635bff', chart: 'M0,37 L9,34 L18,35 L27,29 L36,24 L45,26 L55,20 L64,16 L73,18 L82,12 L91,8 L100,3' },
-	{ label: 'Agendas confirmadas', value: '172', change: '+22.1%', icon: 'ki-cup', color: '#10a7a7', chart: 'M0,37 L9,29 L18,33 L27,27 L36,24 L45,20 L55,23 L64,16 L73,14 L82,11 L91,8 L100,3' },
-		{ label: 'Links enviados', value: '400', change: '+3.8%', icon: 'ki-chart-simple', color: '#2b91e8', chart: 'M0,37 L9,27 L18,32 L27,22 L36,27 L45,13 L55,18 L64,8 L73,13 L82,3 L91,8 L100,8' },
-		{ label: 'Links abiertos', value: '250', change: '-10.1%', negative: true, icon: 'ki-graph-up', color: '#e9a11b', chart: 'M0,17 L9,3 L18,23 L27,10 L36,30 L45,23 L55,30 L64,37 L73,23 L82,30 L91,30 L100,30' },
-]
+import { useDashboardStore } from '../../stores';
+const dashboard = useDashboardStore();
 </script>
 
 <style scoped>
@@ -82,10 +85,24 @@ const cards: StatCard[] = [
 }
 
 .crm-stat-label {
+	display: flex;
+	align-items: center;
+	gap: 6px;
 	margin: 0 0 8px;
 	color: var(--muted-foreground);
 	font-size: 12px;
 	font-weight: 500;
+}
+
+.crm-stat-estimated {
+	padding: 1px 6px;
+	border-radius: 999px;
+	background: color-mix(in srgb, #e9a11b 16%, transparent);
+	color: #e9a11b;
+	font-size: 9px;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: .02em;
 }
 
 .crm-stat-value {
@@ -132,6 +149,74 @@ const cards: StatCard[] = [
 	width: 100%;
 	height: 54px;
 	margin-top: 18px;
+}
+
+.crm-stat-empty {
+	height: 100%;
+	min-height: 176px;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: 8px;
+	padding: 24px;
+	text-align: center;
+	color: var(--muted-foreground);
+}
+
+.crm-stat-empty i {
+	font-size: 22px;
+}
+
+.crm-stat-empty p {
+	margin: 0;
+	font-size: 11px;
+	line-height: 1.5;
+}
+
+.crm-stat-skeleton {
+	min-height: 176px;
+	padding: 17px;
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	background: var(--surface);
+	border: 1px solid var(--border);
+	border-radius: 8px;
+}
+
+.skeleton-line {
+	display: block;
+	height: 12px;
+	border-radius: 4px;
+	background: var(--border);
+	animation: skeleton-pulse 1.4s ease-in-out infinite;
+}
+
+.skeleton-line.w-60 {
+	width: 60%;
+}
+
+.skeleton-line.w-40 {
+	width: 40%;
+}
+
+.skeleton-line.w-30 {
+	width: 30%;
+}
+
+.skeleton-line.tall {
+	height: 24px;
+	margin-top: 4px;
+}
+
+@keyframes skeleton-pulse {
+	0%, 100% {
+		opacity: .5;
+	}
+	50% {
+		opacity: 1;
+	}
 }
 
 @media (max-width: 1024px) {

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { useTeamsStore } from '../../stores';
+import { FASE_COLORS } from '../../constants/fases';
 const teams = useTeamsStore();
 const allSelected = computed(() => teams.visible.length > 0 && teams.visible.every((team) => teams.selected.includes(team.id)));
 function handleSearch(event: Event) {
@@ -8,8 +9,6 @@ function handleSearch(event: Event) {
 }
 function toggleAll() {
 	teams.visible.forEach((team: { id: number }) => {
-		console.log(team)
-		console.log(allSelected.value)
 		if (allSelected.value) {
 			if (teams.selected.includes(team.id)) teams.toggle(team.id);
 		} else if (!teams.selected.includes(team.id)) teams.toggle(team.id);
@@ -47,7 +46,7 @@ function toggleAll() {
 						</td>
 						<td><span class="rating"><i v-for="index in 5" :key="index" class="ki-solid ki-star" :class="{ off: index > team.rating }" /></span></td>
 						<td>{{ team.updated }}</td>
-						<td><span class="kt-badge kt-badge-secondary">{{ team.phase }}</span></td>
+						<td><span class="kt-badge fase-badge" :style="{ '--fase-color': FASE_COLORS[team.phase] }">{{ team.phase }}</span></td>
 						<!-- <span class="kt-badge kt-badge-warning kt-badge-sm rounded-full gap-1">
                <i class="ki-solid ki-star text-white -mt-0.5">
                </i>

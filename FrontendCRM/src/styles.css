@@ -1289,7 +1289,10 @@ h2 {
 }
 
 .bottom-grid {
-    grid-template-columns: minmax(0, 2fr) minmax(300px, 1fr);
+ 	display: grid;
+  	grid-template-columns: minmax(0, 2fr) minmax(300px, 1fr);
+ 	gap: 20px;
+ 	align-items: stretch;
 }
 
 .mobile-header {
@@ -2675,4 +2678,71 @@ h2 {
 .theme-item .theme-switch:checked {
 	background: var(--primary);
 	border-color: var(--primary);
+}
+
+/* ── Filtro de periodo: rango personalizado ──────────────────────── */
+.custom-range {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	color: var(--muted-foreground);
+	font-size: 12px;
+}
+
+.custom-range input {
+	height: 38px;
+	padding: 0 10px;
+	border: 1px solid var(--border);
+	border-radius: 6px;
+	background: var(--surface);
+	color: var(--text);
+	font-size: 12px;
+}
+
+/* ── Badge de "Fase" coloreado según FASE_COLORS ─────────────────── */
+.fase-badge {
+	background: color-mix(in srgb, var(--fase-color) 16%, transparent);
+	color: var(--fase-color);
+	border-color: color-mix(in srgb, var(--fase-color) 30%, transparent);
+}
+
+/* ── Card del gráfico de leads por fase (dona) ───────────────────── */
+.phase-card {
+	display: flex;
+	flex-direction: column;
+}
+
+.phase-chart-host {
+	flex: 1;
+	display: flex;
+	align-items: center;
+	margin-top: 8px;
+}
+
+.date-dropdown {
+	display: block;
+}
+
+.range-dropdown {
+	width: 620px;
+	max-width: calc(100vw - 40px);
+	max-height: none;
+	overflow: auto;
+	padding: 12px;
+	background: var(--surface);
+	border: 1px solid var(--border);
+	border-radius: 10px;
+	box-shadow: 0 8px 20px #00000030;
+	z-index: 100;
+}
+
+/* ── Hover más visible en las opciones del selector de periodo ──────
+   .date-option:hover ya existía (background: var(--background)), pero
+   en modo oscuro se nota casi nada porque --background y --surface
+   quedan muy parecidos entre sí. Esta regla, al ir después en el
+   archivo, gana sobre esa para el estado :hover puntualmente — el
+   estilo de .date-option.active queda intacto. */
+.date-option:hover {
+	background: color-mix(in srgb, var(--primary) 12%, transparent);
+	color: var(--primary);
 }
