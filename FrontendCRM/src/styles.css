@@ -1289,7 +1289,10 @@ h2 {
 }
 
 .bottom-grid {
-    grid-template-columns: minmax(0, 2fr) minmax(300px, 1fr);
+ 	display: grid;
+  	grid-template-columns: minmax(0, 2fr) minmax(300px, 1fr);
+ 	gap: 20px;
+ 	align-items: stretch;
 }
 
 .mobile-header {
@@ -2675,4 +2678,122 @@ h2 {
 .theme-item .theme-switch:checked {
 	background: var(--primary);
 	border-color: var(--primary);
+}
+
+/* ── Filtro de periodo: rango personalizado ──────────────────────── */
+.custom-range {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	color: var(--muted-foreground);
+	font-size: 12px;
+}
+
+.custom-range input {
+	height: 38px;
+	padding: 0 10px;
+	border: 1px solid var(--border);
+	border-radius: 6px;
+	background: var(--surface);
+	color: var(--text);
+	font-size: 12px;
+}
+
+/* ── Badge de "Fase" coloreado según FASE_COLORS ─────────────────── */
+.fase-badge {
+	background: color-mix(in srgb, var(--fase-color) 16%, transparent);
+	color: var(--fase-color);
+	border-color: color-mix(in srgb, var(--fase-color) 30%, transparent);
+}
+
+/* ── Card del gráfico de leads por fase (dona) ───────────────────── */
+.phase-card {
+	display: flex;
+	flex-direction: column;
+}
+
+.phase-chart-host {
+	flex: 1;
+	display: flex;
+	align-items: center;
+	margin-top: 8px;
+}
+
+.date-dropdown {
+	display: block;
+}
+
+/* ── Calendario del rango personalizado ──────────────────────────── */
+.range-dropdown {
+	width: 260px;
+	padding: 12px;
+}
+
+.range-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	margin-bottom: 10px;
+}
+
+.range-header b {
+	font-size: 13px;
+	text-transform: capitalize;
+}
+
+.range-weekdays {
+	display: grid;
+	grid-template-columns: repeat(7, 1fr);
+	margin-bottom: 4px;
+}
+
+.range-weekdays span {
+	text-align: center;
+	font-size: 10px;
+	color: var(--muted-foreground);
+	padding: 4px 0;
+}
+
+.range-grid {
+	display: grid;
+	grid-template-columns: repeat(7, 1fr);
+	gap: 2px;
+}
+
+.range-day {
+	height: 30px;
+	border-radius: 6px;
+	font-size: 12px;
+	color: var(--text);
+	background: transparent;
+}
+
+.range-day:hover {
+	background: var(--background);
+}
+
+.range-day.outside {
+	color: var(--muted-foreground);
+	opacity: .5;
+}
+
+.range-day.in-range {
+	background: color-mix(in srgb, var(--primary) 14%, transparent);
+	border-radius: 0;
+}
+
+.range-day.selected {
+	background: var(--primary);
+	color: #fff;
+}
+
+/* ── Hover más visible en las opciones del selector de periodo ──────
+   .date-option:hover ya existía (background: var(--background)), pero
+   en modo oscuro se nota casi nada porque --background y --surface
+   quedan muy parecidos entre sí. Esta regla, al ir después en el
+   archivo, gana sobre esa para el estado :hover puntualmente — el
+   estilo de .date-option.active queda intacto. */
+.date-option:hover {
+	background: color-mix(in srgb, var(--primary) 12%, transparent);
+	color: var(--primary);
 }
