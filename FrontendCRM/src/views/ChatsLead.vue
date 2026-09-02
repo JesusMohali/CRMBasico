@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
+import { useRoute } from 'vue-router';
 import ChatSidebar from '../components/chat/ChatSidebar.vue';
 import ChatWindow from '../components/chat/ChatWindow.vue';
 import ContactDetailsPanel from '../components/chat/ContactDetailsPanel.vue';
@@ -197,12 +198,33 @@ const messageMap = ref<Record<number, ChatMessage[]>>({
 	],
 });
 
-const activeId = ref(1);
+const route = useRoute();
+
+// Si se llega desde un link tipo /chats?id=3 (por ejemplo, el botón
+// "Ir al chat" de la página de Estado de las conversaciones), abre
+// directo esa conversación en vez de la primera de la lista.
+function resolveInitialId() {
+	const fromQuery = Number(route.query.id);
+	if (fromQuery && conversations.value.some((item) => item.id === fromQuery)) return fromQuery;
+	return 1;
+}
+
+const activeId = ref(resolveInitialId());
 const search = ref('');
 const detailsOpen = ref(false);
 const panelColumnActive = ref(false);
 const activeConversation = computed(() => conversations.value.find((conversation) => conversation.id === activeId.value) ?? conversations.value[0]);
 const filteredConversations = computed(() => conversations.value.filter((conversation) => `${conversation.name} ${conversation.preview}`.toLowerCase().includes(search.value.toLowerCase())));
+
+// También reacciona si ya estás en /chats y llega un nuevo ?id= (el
+// componente no se vuelve a montar al navegar dentro de la misma ruta).
+watch(
+	() => route.query.id,
+	(value) => {
+		const numId = Number(value);
+		if (numId && conversations.value.some((item) => item.id === numId)) activeId.value = numId;
+	}
+);
 
 function selectConversation(conversation: Conversation) {
 	activeId.value = conversation.id;
