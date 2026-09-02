@@ -341,6 +341,10 @@ h2 {
     color: #fff;
 }
 
+.kt-btn-primary:hover {
+    background: color-mix(in srgb, var(--primary) 88%, #000);
+}
+
 .kt-btn-secondary {
     color: var(--text);
     border: 1px solid var(--border);
@@ -3057,4 +3061,157 @@ h2 {
 	display: flex;
 	align-items: center;
 	gap: 12px;
+}
+/* ── Autenticación ────────────────────────────────────────────────
+   Toda la página queda con un tono navy fijo (no el negro por
+   defecto del modo oscuro de la app), y NO cambia según el tema
+   claro/oscuro que tenga el usuario — es a propósito. La clase
+   "dark" puesta directo en .auth-shell hace que los componentes
+   reales de Metronic (kt-input, kt-btn, etc.) dentro de esta página
+   siempre rendericen su versión oscura, sin importar si <html>
+   tiene .dark o no — es la misma variable CSS, solo que la volvemos
+   a declarar acá adentro. Así el texto (var(--text), etc.) también
+   sigue funcionando solo, ya resuelve al tono oscuro correcto. */
+.auth-shell {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+	min-height: 100vh;
+	background: #0f172a;
+}
+
+.auth-form-side {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 40px 48px;
+}
+
+.auth-form-wrap {
+	width: 100%;
+	max-width: 440px;
+}
+
+.auth-brand-mobile {
+	display: none;
+	align-items: center;
+	gap: 10px;
+	margin-bottom: 32px;
+	color: var(--text);
+	font-size: 17px;
+	font-weight: 700;
+}
+
+.auth-brand-mobile img {
+	width: 32px;
+	height: 32px;
+}
+
+.auth-heading {
+	margin-bottom: 32px;
+}
+
+.auth-heading h1 {
+	margin: 0 0 8px;
+	font-size: 26px;
+	font-weight: 700;
+	color: var(--text);
+}
+
+.auth-heading p {
+	margin: 0;
+	color: var(--muted-foreground);
+	font-size: 14px;
+}
+
+.auth-form {
+	display: flex;
+	flex-direction: column;
+	gap: 18px;
+}
+
+.auth-field {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+
+.auth-field-head {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+}
+
+.auth-field-head .kt-link {
+	flex: none;
+	white-space: nowrap;
+	font-size: 12px;
+}
+
+.auth-submit {
+	width: 100%;
+	margin-top: 4px;
+}
+
+/* ── Panel de marca: la imagen ocupa todo el lado derecho ───────── */
+.auth-brand-side {
+	position: relative;
+	display: none;
+	overflow: hidden;
+}
+
+.auth-brand-image {
+	position: absolute;
+	inset: 0;
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+	object-position: center;
+}
+
+.auth-brand-scrim {
+	position: relative;
+	z-index: 1;
+	display: flex;
+	align-items: flex-end;
+	justify-content: center;
+	width: 100%;
+	height: 100%;
+	padding: 56px;
+	background: linear-gradient(180deg, rgba(15, 23, 42, 0.1) 0%, rgba(15, 23, 42, 0.92) 100%);
+}
+
+.auth-brand-content {
+	text-align: center;
+	max-width: 360px;
+}
+
+.auth-brand-content h2 {
+	margin: 0 0 8px;
+	color: #fff;
+	font-size: 26px;
+	font-weight: 700;
+}
+
+.auth-brand-content p {
+	margin: 0;
+	color: #cbd5e1;
+	font-size: 14px;
+	line-height: 1.6;
+}
+
+@media (min-width: 1024px) {
+	.auth-brand-side {
+		display: block;
+	}
+}
+
+@media (max-width: 1023px) {
+	.auth-brand-mobile {
+		display: flex;
+	}
+
+	.auth-shell {
+		grid-template-columns: 1fr;
+	}
 }

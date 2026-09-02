@@ -6,12 +6,14 @@ import ConversationsStatus from '../views/ConversationsStatus.vue';
 import AgendasAttendance from '../views/AgendasAttendance.vue';
 import OpportunityDetail from '../views/OpportunityDetail.vue';
 import Finance from '../views/Finance.vue';
+import SignIn from '../views/SignIn.vue';
 
 const router = createRouter({
 	history: createWebHistory(),
 	routes: [
-		{ path: '/', redirect: '/overview' },
+		{ path: '/', redirect: '/sign-in' },
 		{ path: '/overview', component: DashboardOverview },
+		{ path: '/sign-in', component: SignIn, meta: { blank: true } },
 		{ path: '/public-profile', component: SectionView, props: { title: 'Public Profile' } },
 		{ path: '/chats', component: ChatsLead },
 		{ path: '/conversaciones', component: ConversationsStatus },
