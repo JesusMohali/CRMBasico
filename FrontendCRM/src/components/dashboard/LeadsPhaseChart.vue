@@ -48,7 +48,7 @@ onBeforeUnmount(() => chart?.destroy());
 		<div class="card-head">
 			<div>
 				<h2>Leads por fase</h2>
-				<p>Distribución del embudo activo</p>
+				<p>Distribución de los leads en cada fase</p>
 			</div>
 		</div>
 		<div ref="host" class="phase-chart-host" />
