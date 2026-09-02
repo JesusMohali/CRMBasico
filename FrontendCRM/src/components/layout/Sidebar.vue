@@ -57,6 +57,12 @@ function closeUserMenu(event: MouseEvent) {
 function handleThemeChange(event: Event) {
 	ui.setTheme((event.target as HTMLInputElement).checked);
 }
+
+function handleLogout() {
+	// Aquí iría la lógica de cierre de sesión, como limpiar tokens, etc.
+	// Por ahora solo redirige a la página de inicio de sesión.
+	router.push('/sign-in');
+}
 onMounted(() => document.addEventListener('click', closeUserMenu));
 onBeforeUnmount(() => document.removeEventListener('click', closeUserMenu));
 </script>
@@ -135,7 +141,7 @@ onBeforeUnmount(() => document.removeEventListener('click', closeUserMenu));
 						><i class="ki-filled ki-moon" /> <b>Dark Mode</b
 						><input class="theme-switch" type="checkbox" :checked="ui.dark" @change="handleThemeChange"
 					/></label>
-					<button class="logout-button" @click="userMenuOpen = false">Log out</button>
+					<button class="logout-button" @click="handleLogout">Cerrar sesión</button>
 				</div>
 			</Transition>
 			<div class="sidebar-foot">
@@ -143,8 +149,8 @@ onBeforeUnmount(() => document.removeEventListener('click', closeUserMenu));
 					<span class="avatar avatar-green">JD</span><span class="user-summary"><b>John Doe</b><small>Administrator</small></span>
 				</button>
 				<div class="footer-actions">
-					<button class="icon-btn" title="Notifications" @click="ui.notificationsOpen = true"><i class="ki-filled ki-notification-status" /></button
-					><button class="icon-btn" title="Log out" @click="userMenuOpen = false"><i class="ki-filled ki-exit-right" /></button>
+					<!-- <button class="icon-btn" title="Notifications" @click="ui.notificationsOpen = true"><i class="ki-filled ki-notification-status" /></button
+					> --><button class="icon-btn" title="Cerrar sesión" @click="handleLogout"><i class="ki-filled ki-exit-right" /></button>
 				</div>
 			</div>
 		</div>
