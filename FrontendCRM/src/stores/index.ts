@@ -28,6 +28,7 @@ export const useTeamsStore = defineStore('teams', () => {
   const query = ref('')
   const page = ref(1)
   const selected = ref<number[]>([])
+  const phaseFilter = ref<Fase | 'Todas'>('Todas')
   const teams = ref<Lead[]>([
     { id: 1, name: 'Jesús Mohali', email: 'jesus.mohali@example.com', user: 'jesus.mohali', updated: '21 Oct, 2024', phase: 'Llamada', },
     { id: 2, name: 'Diana Lozano', email: 'diana.lozano@example.com', user: 'diana.lozano', updated: '15 Oct, 2024', phase: 'Situación', },
@@ -42,9 +43,11 @@ export const useTeamsStore = defineStore('teams', () => {
   ])
   const filtered = computed(() => {
     const search = query.value.trim().toLowerCase()
-    if (!search) return teams.value
 
     return teams.value.filter(team => {
+      if (phaseFilter.value !== 'Todas' && team.phase !== phaseFilter.value) return false
+      if (!search) return true
+
       const haystack = [
         team.name,
         team.email,
@@ -60,8 +63,9 @@ export const useTeamsStore = defineStore('teams', () => {
   const visible = computed(() => filtered.value.slice((page.value - 1) * 5, page.value * 5))
   const byFase = computed(() => FASES.map(fase => ({ fase, total: teams.value.filter(team => team.phase === fase).length })))
   function search(value: string) { query.value = value; page.value = 1 }
+  function setPhaseFilter(value: Fase | 'Todas') { phaseFilter.value = value; page.value = 1 }
   function toggle(id: number) { selected.value = selected.value.includes(id) ? selected.value.filter(item => item !== id) : [...selected.value, id] }
-  return { query, page, selected, teams, filtered, pages, visible, byFase, search, toggle }
+  return { query, page, selected, phaseFilter, teams, filtered, pages, visible, byFase, search, setPhaseFilter, toggle }
 })
 
 export type ConversationStatus = 'Nueva' | 'En conversación' | 'Esperando respuesta' | 'Agendada' | 'Descartada'

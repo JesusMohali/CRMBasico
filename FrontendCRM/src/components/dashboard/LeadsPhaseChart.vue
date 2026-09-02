@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import ApexCharts from 'apexcharts';
-import { useTeamsStore } from '../../stores';
+import { useTeamsStore, useUiStore } from '../../stores'
 import { FASE_COLORS } from '../../constants/fases';
 
 const teams = useTeamsStore();
+const ui = useUiStore();
 const host = ref<HTMLElement>();
 let chart: ApexCharts | undefined;
 
@@ -20,7 +21,7 @@ function render() {
 		colors: teams.byFase.map((item) => FASE_COLORS[item.fase]),
 		dataLabels: { enabled: false },
 		stroke: { width: 2, colors: [isDark ? '#101114' : '#fff'] },
-		legend: { show: true, position: 'right', fontSize: '12px', markers: { size: 6 }, itemMargin: { vertical: 4 } },
+		legend: { show: true, position: 'right', fontSize: '12px', markers: { size: 6 }, itemMargin: { vertical: 4 }, labels: { colors: isDark ? '#fff' : undefined } },
 		plotOptions: {
 			pie: {
 				donut: {
@@ -38,9 +39,9 @@ function render() {
 	chart.render();
 }
 
-onMounted(render);
-watch(() => teams.byFase, render, { deep: true });
-onBeforeUnmount(() => chart?.destroy());
+onMounted(render)
+watch(() => ui.dark, render)
+onBeforeUnmount(() => chart?.destroy())
 </script>
 
 <template>

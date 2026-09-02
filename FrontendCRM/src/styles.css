@@ -3215,3 +3215,18 @@ h2 {
 		grid-template-columns: 1fr;
 	}
 }
+
+/* ── Selector de fase en la tabla de Leads ───────────────────────── */
+.phase-dot {
+	display: inline-block;
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+	background: var(--fase-color, var(--muted-foreground));
+	margin-right: 7px;
+	flex: none;
+}
+
+.phase-menu .date-toggle {
+	white-space: nowrap;
+}
