@@ -1,10 +1,38 @@
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import type { FastifyInstance } from 'fastify';
 import { prepararBase, URL_APP } from './helpers.js';
 
 const PASSWORD = 'contrasena-de-prueba-larga';
 
+// Estado del doble de SES. En vi.hoisted porque la factoria de vi.mock se iza al
+// principio del fichero y no puede cerrar sobre una variable normal.
+const ses = vi.hoisted(() => ({
+  enviados: [] as any[],
+  fallo: null as Error | null,
+}));
+
+// El unico doble de toda la suite, y con motivo: al otro lado de este no hay una
+// base de datos que se pueda levantar en un contenedor, hay AWS. Todo lo demas
+// sigue corriendo contra Postgres de verdad.
+vi.mock('@aws-sdk/client-sesv2', () => {
+  class SendEmailCommand {
+    constructor(readonly input: any) {}
+  }
+  class SESv2Client {
+    constructor(readonly opciones: any) {}
+    async send(comando: SendEmailCommand) {
+      if (ses.fallo) throw ses.fallo;
+      ses.enviados.push(comando.input);
+      return { MessageId: 'simulado' };
+    }
+  }
+  return { SESv2Client, SendEmailCommand };
+});
+
 let app: FastifyInstance;
+// Se guarda la instancia del modulo de config para poder encender el envio en
+// las pruebas que lo necesitan (ver el describe 'correo').
+let config: any;
 
 async function pedir(metodo: string, ruta: string, cuerpo?: unknown, token?: string) {
   const respuesta = await app.inject({
@@ -27,12 +55,19 @@ beforeAll(async () => {
   // Sin esto la suite se estrangula sola: hace decenas de logins desde la misma
   // IP. Lo que aqui se prueba es el bloqueo POR CUENTA, que es independiente.
   process.env.RATE_LIMIT_ENABLED = 'false';
+  // Sin envio de correo por defecto: los tokens salen por el log. Las dos
+  // pruebas que necesitan el envio encendido lo encienden ellas.
+  process.env.EMAIL_ENABLED = 'false';
+  // Obligatorias aunque el envio este apagado: config las valida al arrancar.
+  process.env.EMAIL_FROM = 'no-responder@peak.test';
+  process.env.APP_BASE_URL = 'https://app.peak.test';
 
   const { hashearPassword } = await import('../src/auth/passwords.js');
   await prepararBase(await hashearPassword(PASSWORD));
 
   const { crearServidor } = await import('../src/server.js');
   app = await crearServidor();
+  ({ config } = await import('../src/config.js'));
 }, 120_000);
 
 afterAll(async () => {
@@ -256,5 +291,70 @@ describe('salud', () => {
   it('readyz sí', async () => {
     const r = await pedir('GET', '/readyz');
     expect(r.estado).toBe(200);
+  });
+});
+
+describe('correo', () => {
+  it('con EMAIL_ENABLED=false no se intenta enviar nada', async () => {
+    ses.enviados.length = 0;
+
+    const r = await pedir('POST', '/api/auth/password/forgot', {
+      email: 'ana@acme-formacion.test',
+    });
+
+    expect(r.estado).toBe(202);
+    // Ni siquiera se llega a construir el comando: el envio se corta antes.
+    expect(ses.enviados).toHaveLength(0);
+  });
+
+  it('manda la invitación con el enlace cuando el envío está activo', async () => {
+    config.EMAIL_ENABLED = true;
+    ses.enviados.length = 0;
+
+    try {
+      const ana = await login('ana@acme-formacion.test', PASSWORD, 'planb-trading');
+      const r = await pedir(
+        'POST', '/api/members/invitations',
+        { email: 'invitada@planb-trading.test', rol: 'member' },
+        ana.cuerpo.accessToken,
+      );
+      expect(r.estado).toBe(200);
+
+      expect(ses.enviados).toHaveLength(1);
+      const enviado = ses.enviados[0];
+      expect(enviado.Destination.ToAddresses).toEqual(['invitada@planb-trading.test']);
+
+      const html = enviado.Content.Simple.Body.Html.Data;
+      const texto = enviado.Content.Simple.Body.Text.Data;
+      // El enlace tiene que llevar el token y apuntar a APP_BASE_URL.
+      expect(html).toMatch(/https:\/\/app\.peak\.test\/accept-invitation\?token=.+/);
+      expect(texto).toContain('https://app.peak.test/accept-invitation?token=');
+      // Y el correo dice quién invita y a dónde.
+      expect(texto).toContain('Ana Ríos');
+      expect(texto).toContain('Plan B Trading');
+    } finally {
+      config.EMAIL_ENABLED = false;
+    }
+  });
+
+  it('un fallo de SES no rompe forgot-password: sigue devolviendo 202', async () => {
+    config.EMAIL_ENABLED = true;
+    ses.fallo = new Error('SES no está disponible (simulado)');
+    ses.enviados.length = 0;
+
+    try {
+      const r = await pedir('POST', '/api/auth/password/forgot', {
+        email: 'ana@acme-formacion.test',
+      });
+
+      // El token ya quedó escrito en la base antes de intentar el envío: tirar un
+      // 500 aquí le diría al usuario que no se hizo nada cuando sí se hizo.
+      expect(r.estado).toBe(202);
+      expect(r.cuerpo.mensaje).toMatch(/enlace/);
+      expect(ses.enviados).toHaveLength(0);
+    } finally {
+      ses.fallo = null;
+      config.EMAIL_ENABLED = false;
+    }
   });
 });

@@ -1,0 +1,169 @@
+# Despliegue de la API de autenticacion del CRM al entorno dev.
+#
+# Mismo mecanismo que la UI: nada de tokens ni access keys, la autenticacion con AWS es
+# por OIDC y el rol gpi-crm-api-dev-deployer solo puede empujar a gpi-crm-api y refrescar
+# gpi-dev-crm-api. Rol propio y distinto al de la UI a proposito: comparten repositorio,
+# pero un fallo en el pipeline del frontend no debe poder tocar el servicio que valida
+# las contrasenas.
+name: Deploy CRM API (dev)
+
+on:
+  push:
+    branches: [dev]
+    paths:
+      - 'BackendCRM/**'
+      - '.github/workflows/deploy-crm-api-dev.yml'
+  workflow_dispatch:
+
+# Grupo distinto al de la UI: son dos servicios independientes y un deploy del frontend
+# no tiene por que esperar a este. cancel-in-progress en false por lo mismo que alli:
+# cortar un update-service a la mitad deja el servicio en un estado raro.
+concurrency:
+  group: deploy-crm-api-dev
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  id-token: write # sin esto no se emite el token OIDC y el paso de credenciales falla
+
+env:
+  AWS_REGION: eu-west-1
+  AWS_ROLE: arn:aws:iam::288078749170:role/gpi-crm-api-dev-deployer
+  ECR_REPOSITORY: gpi-crm-api
+  ECS_CLUSTER: gpi-cluster
+  ECS_SERVICE: gpi-dev-crm-api
+  ECS_TASK_FAMILY: gpi-dev-crm-api
+  IMAGE_TAG: dev
+
+jobs:
+  deploy:
+    name: Tests, build, push y deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    # La UI no tiene esto porque es un frontend estatico servido por nginx: si sale mal
+    # se ve. Aqui no — una regresion en el login o en el aislamiento por tenant no se
+    # nota mirando la pagina, se nota cuando alguien entra donde no debe. Las pruebas
+    # van contra Postgres de verdad porque buena parte de lo que verifican (RLS,
+    # constraints, transacciones) es comportamiento de la base, no del codigo.
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          # 55432 en el runner porque es el puerto que test/helpers.ts espera por
+          # defecto. Se mapea en vez de exportar TEST_ADMIN_URL/TEST_APP_URL para que
+          # CI y el `docker run` del README arranquen exactamente igual.
+          - 55432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Node 22
+        uses: actions/setup-node@v4
+        with:
+          # El package.json exige >=22 y la imagen de runtime es node:22-alpine: probar
+          # sobre otra version seria probar otra cosa.
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: BackendCRM/package-lock.json
+
+      - name: Instalar dependencias
+        working-directory: BackendCRM
+        # npm ci y no npm install: respeta el lockfile al pie de la letra, que es lo que
+        # hace tambien el Dockerfile.
+        run: npm ci --no-audit --no-fund
+
+      - name: Typecheck
+        working-directory: BackendCRM
+        run: npm run typecheck
+
+      - name: Tests
+        working-directory: BackendCRM
+        run: npm test
+
+      - name: Credenciales AWS (OIDC)
+        # Despues de las pruebas: si algo falla, el job termina sin haber pedido siquiera
+        # credenciales a AWS.
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.AWS_ROLE }}
+          aws-region: ${{ env.AWS_REGION }}
+          role-session-name: gh-crm-api-dev-${{ github.run_id }}
+
+      - name: Login en ECR
+        id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build y push de la imagen
+        id: build
+        env:
+          REGISTRY: ${{ steps.ecr.outputs.registry }}
+        run: |
+          set -euo pipefail
+          IMAGE="${REGISTRY}/${ECR_REPOSITORY}"
+
+          # Dos tags sobre la MISMA imagen: "dev" es el movil al que apunta la definicion
+          # de task, y el sha queda como rastro de que commit esta corriendo. Para volver
+          # atras basta reetiquetar un sha viejo como "dev" y relanzar el workflow.
+          docker build \
+            --tag "${IMAGE}:${IMAGE_TAG}" \
+            --tag "${IMAGE}:${GITHUB_SHA}" \
+            BackendCRM
+
+          docker push "${IMAGE}:${IMAGE_TAG}"
+          docker push "${IMAGE}:${GITHUB_SHA}"
+
+          echo "image=${IMAGE}:${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
+
+      - name: Desplegar en ECS
+        id: deploy
+        run: |
+          set -euo pipefail
+
+          # Se reapunta el servicio a la FAMILIA, no a una revision fija: ECS resuelve la
+          # ultima ACTIVE. Asi, si Terraform cambio env vars, secretos o cpu/memoria, ese
+          # cambio entra en este deploy en vez de quedarse esperando para siempre (el
+          # servicio tiene ignore_changes = [task_definition], es Terraform quien cede el
+          # puntero al pipeline a proposito).
+          #
+          # --force-new-deployment obliga a levantar tasks nuevas aunque la revision no
+          # haya cambiado, que es el caso normal: lo que cambio es el contenido del tag.
+          REVISION=$(aws ecs update-service \
+            --cluster "${ECS_CLUSTER}" \
+            --service "${ECS_SERVICE}" \
+            --task-definition "${ECS_TASK_FAMILY}" \
+            --force-new-deployment \
+            --query 'service.taskDefinition' \
+            --output text)
+
+          echo "revision=${REVISION}" >> "$GITHUB_OUTPUT"
+          echo "Servicio apuntando a ${REVISION}"
+
+      - name: Esperar a que el servicio quede estable
+        run: |
+          set -euo pipefail
+          aws ecs wait services-stable \
+            --cluster "${ECS_CLUSTER}" \
+            --services "${ECS_SERVICE}"
+
+      - name: Resumen
+        if: always()
+        run: |
+          {
+            echo "### CRM API dev"
+            echo ""
+            echo "| | |"
+            echo "|---|---|"
+            echo "| Commit | \`${GITHUB_SHA}\` |"
+            echo "| Imagen | \`${{ steps.build.outputs.image }}\` |"
+            echo "| Task definition | \`${{ steps.deploy.outputs.revision }}\` |"
+            echo "| URL | https://crm-dev.gopeakintelligence.com/api |"
+          } >> "$GITHUB_STEP_SUMMARY"

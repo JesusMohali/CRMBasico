@@ -3,6 +3,7 @@ import { config } from '../config.js';
 import { autenticar, exigirRol, exigirTenant } from '../auth/middleware.js';
 import * as servicio from '../auth/service.js';
 import * as esquemas from '../auth/schemas.js';
+import { enviarInvitacion, enviarResetPassword } from '../lib/email.js';
 
 /**
  * Limite por endpoint. Devuelve `false` cuando el rate limit global esta
@@ -56,10 +57,22 @@ export async function rutasAuth(app: FastifyInstance) {
     const { email } = esquemas.esquemaSolicitarReset.parse(peticion.body);
     const token = await servicio.solicitarResetPassword(email, contextoDe(peticion));
 
-    // TODO(envío de email): cuando haya proveedor, mandar el enlace con el token.
-    // Hasta entonces queda en el log en desarrollo y NUNCA en la respuesta.
-    if (token && !config.esProduccion) {
-      peticion.log.info({ email, token }, 'token de reset (solo en desarrollo)');
+    if (token) {
+      // Con el correo apagado (tests y desarrollo local) el token sale por el
+      // log: sin buzón al otro lado es la única forma de seguir el flujo. Con el
+      // correo activo NUNCA se registra — un token en el log es un token
+      // comprometido — y en la respuesta no va jamás.
+      if (!config.EMAIL_ENABLED) {
+        peticion.log.info({ email, token }, 'token de reset (correo desactivado)');
+      }
+
+      // Se espera al envío, pero no puede fallar la petición: enviarResetPassword
+      // no lanza (ver lib/email.ts). El token ya está guardado; si SES falla, el
+      // usuario puede volver a pedir el enlace.
+      await enviarResetPassword(
+        { para: email, enlace: `${config.appBaseUrl}/reset-password?token=${encodeURIComponent(token)}` },
+        peticion.log,
+      );
     }
 
     // 202 siempre, exista o no el email: si respondiera distinto, este endpoint
@@ -124,7 +137,7 @@ export async function rutasAuth(app: FastifyInstance) {
 
     privadas.post('/members/invitations', { preHandler: exigirRol('admin') }, async (peticion) => {
       const datos = esquemas.esquemaInvitar.parse(peticion.body);
-      const token = await servicio.invitar(
+      const invitacion = await servicio.invitar(
         exigirTenant(peticion),
         peticion.usuario!.id,
         datos.email,
@@ -132,10 +145,26 @@ export async function rutasAuth(app: FastifyInstance) {
         contextoDe(peticion),
       );
 
-      // TODO(envío de email): igual que el reset, el token va por correo.
-      if (!config.esProduccion) {
-        peticion.log.info({ email: datos.email, token }, 'token de invitación (solo en desarrollo)');
+      // Mismo criterio que en el reset: el token solo aparece en el log cuando no
+      // hay envío real.
+      if (!config.EMAIL_ENABLED) {
+        peticion.log.info(
+          { email: datos.email, token: invitacion.token },
+          'token de invitación (correo desactivado)',
+        );
       }
+
+      // La invitación ya está confirmada en la base. Si el correo no sale, se
+      // registra el error y se responde igual: repetir la invitación la reenvía.
+      await enviarInvitacion(
+        {
+          para: datos.email,
+          nombreQuienInvita: invitacion.nombreQuienInvita,
+          nombreTenant: invitacion.nombreTenant,
+          enlace: `${config.appBaseUrl}/accept-invitation?token=${encodeURIComponent(invitacion.token)}`,
+        },
+        peticion.log,
+      );
 
       return { mensaje: 'Invitación enviada' };
     });

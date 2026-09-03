@@ -526,13 +526,25 @@ export async function confirmarResetPassword(token: string, nueva: string) {
 
 // ── invitaciones ─────────────────────────────────────────────────────────────
 
+/**
+ * Devuelve el token en claro y, con él, los nombres que necesita el correo de
+ * invitación. Salen de aquí y no de una consulta aparte en la ruta porque ya
+ * estamos dentro de la transacción que lee esas dos filas: pedirlas fuera serían
+ * dos viajes más a la base para datos que aquí están a mano.
+ */
+export interface InvitacionCreada {
+  token: string;
+  nombreQuienInvita: string;
+  nombreTenant: string;
+}
+
 export async function invitar(
   tenantId: string,
   invitadorId: string,
   email: string,
   rol: RolTenant,
   contexto: Contexto,
-): Promise<string> {
+): Promise<InvitacionCreada> {
   return enTransaccion(async (cliente) => {
     // Solo el owner puede crear otro owner, y de todos modos la base solo admite
     // uno por tenant (índice único parcial memberships_un_solo_owner).
@@ -571,7 +583,19 @@ export async function invitar(
       ip: contexto.ip,
     });
 
-    return token;
+    // Dos subconsultas en una sola ida a la base. Ambas columnas son NOT NULL y
+    // los ids vienen de una sesión válida, así que la fila existe.
+    const { rows: nombres } = await cliente.query<{ invitador: string; tenant: string }>(
+      `SELECT (SELECT full_name FROM auth.users   WHERE id = $1) AS invitador,
+              (SELECT name      FROM auth.tenants WHERE id = $2) AS tenant`,
+      [invitadorId, tenantId],
+    );
+
+    return {
+      token,
+      nombreQuienInvita: nombres[0]!.invitador,
+      nombreTenant: nombres[0]!.tenant,
+    };
   });
 }
 
