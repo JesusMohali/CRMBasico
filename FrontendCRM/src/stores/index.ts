@@ -492,3 +492,99 @@ export const useFinanceStore = defineStore('finance', () => {
     removeExpense,
   }
 })
+
+// ── Fase 4 · Carpetas de chat ───────────────────────────────────────
+// Agrupan conversaciones por un único filtro a la vez (etiqueta, fase
+// o tiempo desde el último mensaje). "Todos" no vive acá: es un grupo
+// fijo que arma el propio ChatSidebar, así nunca se puede borrar.
+export type ChatFolderFilterField = 'tag' | 'phase' | 'recency'
+
+export const CHAT_FOLDER_FILTER_FIELDS: { value: ChatFolderFilterField; label: string }[] = [
+  { value: 'tag', label: 'Etiqueta' },
+  { value: 'phase', label: 'Fase' },
+  { value: 'recency', label: 'Última vez que escribieron' },
+]
+
+export interface ChatFolder {
+  id: number
+  name: string
+  icon: string
+  color: string
+  filterField: ChatFolderFilterField
+  filterValue: string
+}
+
+// Bucket de recencia a partir de una fecha real — mismo criterio que
+// LEAD_TIME_BUCKETS (Agendas), reusado acá para "tiempo desde el
+// último mensaje".
+export function recencyBucket(date: Date, now: Date = new Date()): LeadTimeBucket {
+  const days = Math.floor((now.getTime() - date.getTime()) / 86400000)
+  if (days <= 0) return 'Mismo día'
+  if (days <= 2) return '1-2 días'
+  if (days <= 7) return '3-7 días'
+  return '+7 días'
+}
+
+export const useChatFoldersStore = defineStore('chatFolders', () => {
+  const folders = ref<ChatFolder[]>([
+    { id: 1, name: 'Prioritarios', icon: 'ki-flag', color: '#f1416c', filterField: 'tag', filterValue: 'Prioritario' },
+  ])
+  let nextId = 2
+
+  function addFolder(input: Omit<ChatFolder, 'id'>) {
+    folders.value.push({ id: nextId++, ...input })
+  }
+
+  function updateFolder(id: number, input: Omit<ChatFolder, 'id'>) {
+    const folder = folders.value.find((item) => item.id === id)
+    if (folder) Object.assign(folder, input)
+  }
+
+  function removeFolder(id: number) {
+    folders.value = folders.value.filter((item) => item.id !== id)
+  }
+
+  return { folders, addFolder, updateFolder, removeFolder }
+})
+
+// ── Confirm dialog global ────────────────────────────────────────────
+// Reemplaza al confirm() nativo del navegador. Cualquier componente
+// puede hacer `await useConfirmStore().ask({ message: '...' })` y le
+// llega un booleano, igual que con confirm(), pero con la estética
+// de la app. El componente que lo renderiza es ConfirmDialog.vue,
+// montado una sola vez en App.vue.
+interface ConfirmOptions {
+  title?: string
+  message: string
+  confirmText?: string
+  cancelText?: string
+  danger?: boolean
+}
+
+export const useConfirmStore = defineStore('confirm', () => {
+  const open = ref(false)
+  const title = ref('')
+  const message = ref('')
+  const confirmText = ref('Confirmar')
+  const cancelText = ref('Cancelar')
+  const danger = ref(false)
+  let resolver: ((value: boolean) => void) | null = null
+
+  function ask(options: ConfirmOptions): Promise<boolean> {
+    title.value = options.title ?? ''
+    message.value = options.message
+    confirmText.value = options.confirmText ?? 'Confirmar'
+    cancelText.value = options.cancelText ?? 'Cancelar'
+    danger.value = options.danger ?? false
+    open.value = true
+    return new Promise((resolve) => { resolver = resolve })
+  }
+
+  function resolve(value: boolean) {
+    open.value = false
+    resolver?.(value)
+    resolver = null
+  }
+
+  return { open, title, message, confirmText, cancelText, danger, ask, resolve }
+})

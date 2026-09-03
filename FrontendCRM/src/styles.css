@@ -1863,6 +1863,209 @@ h2 {
     border-radius: 50%;
 }
 
+/* ── Fase 4 · Carpetas de chat ────────────────────────────────────── */
+.folder-group + .folder-group {
+    margin-top: 2px;
+}
+
+.folder-group-head {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+}
+
+.folder-group-toggle {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 6px;
+    border-radius: 6px;
+    color: var(--text);
+    background: transparent;
+    font-size: 12px;
+    font-weight: 600;
+    text-align: left;
+}
+
+.folder-group-toggle:hover {
+    background: var(--background);
+}
+
+.folder-group-toggle>i:first-child {
+    flex: none;
+    font-size: 15px;
+}
+
+.folder-group-toggle span {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.folder-group-toggle small {
+    flex: none;
+    padding: 1px 6px;
+    border-radius: 999px;
+    background: var(--background);
+    color: var(--muted-foreground);
+    font-size: 10px;
+    font-weight: 600;
+}
+
+.folder-group-toggle .folder-chevron {
+    flex: none;
+    font-size: 10px;
+    color: var(--muted-foreground);
+}
+
+.folder-group-actions {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    flex: none;
+    padding-right: 4px;
+}
+
+.folder-group-actions .icon-btn {
+    min-width: 24px;
+    height: 24px;
+    font-size: 13px;
+}
+
+.folder-group-chats {
+    display: flex;
+    flex-direction: column;
+    padding-bottom: 6px;
+}
+
+.folder-form {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding: 20px;
+}
+
+.icon-picker,
+.color-picker {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 8px;
+}
+
+.icon-picker-option {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 36px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--background);
+    color: var(--muted-foreground);
+    font-size: 15px;
+}
+
+.icon-picker-option:hover {
+    border-color: var(--picker-color);
+    color: var(--picker-color);
+}
+
+.icon-picker-option.active {
+    border-color: var(--picker-color);
+    background: color-mix(in srgb, var(--picker-color) 14%, transparent);
+    color: var(--picker-color);
+}
+
+.color-picker-option {
+    height: 28px;
+    border: 2px solid transparent;
+    border-radius: 6px;
+    background: var(--picker-color);
+}
+
+.color-picker-option.active {
+    border-color: var(--text);
+}
+
+.modal-foot {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    padding-top: 4px;
+    border-top: 1px solid var(--border);
+}
+
+.folder-modal .modal-foot {
+    margin: 0 -20px -20px;
+    padding: 16px 20px;
+}
+
+.confirm-modal {
+    width: min(400px, 100%);
+}
+
+.confirm-body {
+    margin: 0;
+    padding: 20px;
+    color: var(--text);
+    font-size: 13px;
+    line-height: 1.6;
+}
+
+.confirm-modal .modal-head {
+    padding-bottom: 0;
+    border-bottom: 0;
+}
+
+.confirm-modal .modal-foot {
+    padding: 16px 20px;
+}
+
+/* ── Animación de entrada/salida tipo SweetAlert ─────────────────────
+   El fondo hace un fade simple; la caja del modal (hijo directo, vía
+   selector descendiente) hace el "pop" con rebote. Mismas duraciones
+   en ambos para que no se corte una animación cuando Vue saca la
+   clase *-active al terminar la del elemento raíz (.overlay). */
+.modal-pop-enter-active {
+    animation: modal-pop-backdrop-in .3s ease-out;
+}
+
+.modal-pop-enter-active .modal {
+    animation: modal-pop-in .3s cubic-bezier(.34, 1.56, .64, 1);
+}
+
+.modal-pop-leave-active {
+    animation: modal-pop-backdrop-out .15s ease-in forwards;
+}
+
+.modal-pop-leave-active .modal {
+    animation: modal-pop-out .15s ease-in forwards;
+}
+
+@keyframes modal-pop-backdrop-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes modal-pop-backdrop-out {
+    from { opacity: 1; }
+    to { opacity: 0; }
+}
+
+@keyframes modal-pop-in {
+    0% { opacity: 0; transform: scale(.72); }
+    100% { opacity: 1; transform: scale(1); }
+}
+
+@keyframes modal-pop-out {
+    0% { opacity: 1; transform: scale(1); }
+    100% { opacity: 0; transform: scale(.88); }
+}
+
 .chat-window {
     min-width: 0;
     min-height: 0;
@@ -2323,7 +2526,8 @@ h2 {
 	margin-bottom: 5px;
 }
 
-.contact-field input {
+.contact-field input,
+.contact-field select {
 	width: 100%;
 	height: 36px;
 	padding: 0 10px;
@@ -2335,7 +2539,8 @@ h2 {
 	outline: 0;
 }
 
-.contact-field input:focus {
+.contact-field input:focus,
+.contact-field select:focus {
 	border-color: var(--primary);
 	box-shadow: 0 0 0 3px #287de51a;
 }
