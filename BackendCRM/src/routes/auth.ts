@@ -1,6 +1,6 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { config } from '../config.js';
-import { autenticar, exigirRol, exigirTenant } from '../auth/middleware.js';
+import { autenticar, exigirRol } from '../auth/middleware.js';
 import * as servicio from '../auth/service.js';
 import * as esquemas from '../auth/schemas.js';
 import { enviarInvitacion, enviarResetPassword } from '../lib/email.js';
@@ -29,19 +29,10 @@ export async function rutasAuth(app: FastifyInstance) {
     config: { rateLimit: limite(10, '5 minutes') },
   }, async (peticion) => {
     const datos = esquemas.esquemaLogin.parse(peticion.body);
-    const resultado = await servicio.login(
-      datos.email,
-      datos.password,
-      datos.tenant,
-      contextoDe(peticion),
-    );
-
-    return {
-      ...resultado,
-      // Si tiene varios clientes y no eligió, el front tiene que mostrarle el
-      // selector: la sesión está autenticada pero sin tenant activo.
-      requiereElegirTenant: resultado.tenant === null && resultado.membresias.length > 1,
-    };
+    // La respuesta lleva el cliente del usuario y ya está: no hay selector que
+    // mostrar ni segundo paso, porque no hay más de un cliente entre los que
+    // elegir.
+    return servicio.login(datos.email, datos.password, contextoDe(peticion));
   });
 
   app.post('/auth/refresh', {
@@ -113,16 +104,6 @@ export async function rutasAuth(app: FastifyInstance) {
       return { mensaje: todas ? 'Todas las sesiones cerradas' : 'Sesión cerrada' };
     });
 
-    privadas.post('/auth/tenant', async (peticion) => {
-      const { tenant } = esquemas.esquemaCambiarTenant.parse(peticion.body);
-      return servicio.cambiarTenant(
-        peticion.usuario!.id,
-        peticion.usuario!.sesionId,
-        tenant,
-        contextoDe(peticion),
-      );
-    });
-
     privadas.post('/auth/password/change', async (peticion) => {
       const datos = esquemas.esquemaCambiarPassword.parse(peticion.body);
       await servicio.cambiarPassword(peticion.usuario!.id, datos.actual, datos.nueva);
@@ -131,14 +112,16 @@ export async function rutasAuth(app: FastifyInstance) {
 
     // ── administración del cliente: requiere admin ───────────────────────────
 
+    // El tenant sale SIEMPRE del token y nunca de la petición: no hay parámetro
+    // que permita apuntar a otro cliente, así que tampoco hay nada que validar.
     privadas.get('/members', { preHandler: exigirRol('member') }, async (peticion) =>
-      servicio.listarMiembros(exigirTenant(peticion)),
+      servicio.listarMiembros(peticion.usuario!.tenantId),
     );
 
     privadas.post('/members/invitations', { preHandler: exigirRol('admin') }, async (peticion) => {
       const datos = esquemas.esquemaInvitar.parse(peticion.body);
       const invitacion = await servicio.invitar(
-        exigirTenant(peticion),
+        peticion.usuario!.tenantId,
         peticion.usuario!.id,
         datos.email,
         datos.rol,
@@ -175,7 +158,7 @@ export async function rutasAuth(app: FastifyInstance) {
       async (peticion) => {
         const { rol } = esquemas.esquemaCambiarRol.parse(peticion.body);
         await servicio.cambiarRolMiembro(
-          exigirTenant(peticion),
+          peticion.usuario!.tenantId,
           peticion.usuario!.id,
           peticion.params.usuarioId,
           rol,
@@ -189,7 +172,7 @@ export async function rutasAuth(app: FastifyInstance) {
       { preHandler: exigirRol('admin') },
       async (peticion) => {
         await servicio.quitarMiembro(
-          exigirTenant(peticion),
+          peticion.usuario!.tenantId,
           peticion.usuario!.id,
           peticion.params.usuarioId,
         );

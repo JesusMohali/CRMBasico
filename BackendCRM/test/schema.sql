@@ -64,8 +64,10 @@ COMMENT ON FUNCTION auth.current_tenant_id() IS 'Tenant de la conexión, leído 
 -- tablas de usuarios significarían dos flujos de login, dos lógicas de hash y
 -- dos sitios donde olvidarse de bloquear una cuenta comprometida.
 --
--- La pertenencia a un cliente vive en tenant_memberships (un usuario puede
--- estar en varios), y el privilegio global en platform_admins.
+-- La pertenencia a un cliente vive en tenant_memberships. OJO: desde
+-- 006_un_tenant_por_usuario.sql un usuario pertenece como mucho a UN tenant y
+-- platform_admins queda en desuso; los clientes son estancos y no hay permisos
+-- cruzados. Lo que sigue es el esquema base, 006 es quien manda.
 
 -- ── Tipos ────────────────────────────────────────────────────────────────────
 DO $$ BEGIN
@@ -136,7 +138,7 @@ CREATE TABLE IF NOT EXISTS auth.users (
   CONSTRAINT users_intentos_no_negativos CHECK (failed_login_attempts >= 0)
 );
 
-COMMENT ON TABLE  auth.users IS 'Identidad única: la misma tabla para usuarios de clientes y para staff de GPI. El privilegio global se concede en platform_admins, no con un flag aquí.';
+COMMENT ON TABLE  auth.users IS 'Identidad única. Cada cuenta pertenece como mucho a UN cliente (ver tenant_memberships); no existe ningún privilegio que atraviese clientes.';
 COMMENT ON COLUMN auth.users.password_hash IS 'Argon2id calculado EN LA APLICACIÓN. La contraseña en claro nunca viaja al servidor de base ni aparece en pg_stat_statements.';
 COMMENT ON COLUMN auth.users.locked_until IS 'Bloqueo temporal por fuerza bruta. La aplicación lo fija tras N fallos; no hay trigger que lo haga solo.';
 
@@ -156,9 +158,11 @@ CREATE TABLE IF NOT EXISTS auth.tenant_memberships (
   CONSTRAINT memberships_unica UNIQUE (tenant_id, user_id)
 );
 
-COMMENT ON TABLE auth.tenant_memberships IS 'Qué usuario pertenece a qué cliente y con qué rol. Un usuario puede estar en varios tenants con roles distintos.';
+COMMENT ON TABLE auth.tenant_memberships IS 'Qué usuario pertenece a qué cliente y con qué rol. UNA membresía como máximo por usuario (ver 006_un_tenant_por_usuario.sql).';
 
-CREATE INDEX IF NOT EXISTS memberships_user_idx   ON auth.tenant_memberships (user_id);
+-- La búsqueda por user_id (la del login) la cubre el índice ÚNICO que crea
+-- 006_un_tenant_por_usuario.sql sobre esa misma columna. Aquí no se crea un
+-- btree normal para no tener dos índices sobre lo mismo.
 CREATE INDEX IF NOT EXISTS memberships_tenant_idx ON auth.tenant_memberships (tenant_id, role);
 
 -- Un solo owner por tenant: es el responsable de facturación y el destinatario
@@ -168,9 +172,10 @@ CREATE UNIQUE INDEX IF NOT EXISTS memberships_un_solo_owner
   WHERE role = 'owner';
 
 -- ── platform_admins ──────────────────────────────────────────────────────────
--- Tabla y no un booleano en users: así queda registrado QUIÉN concedió el
--- privilegio y CUÁNDO, y la lista de quien puede verlo todo son tres filas que
--- se auditan de un vistazo, en vez de un flag perdido entre miles de usuarios.
+-- EN DESUSO desde 006_un_tenant_por_usuario.sql, que la vacía: un privilegio
+-- que atraviesa clientes es justo lo que el modelo actual descarta. No se borra
+-- la tabla porque queda reservada para el backoffice externo de alta de
+-- clientes. La API de autenticación no la consulta.
 CREATE TABLE IF NOT EXISTS auth.platform_admins (
   user_id    uuid PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   role       auth.platform_role NOT NULL,
@@ -179,7 +184,7 @@ CREATE TABLE IF NOT EXISTS auth.platform_admins (
   notes      text
 );
 
-COMMENT ON TABLE auth.platform_admins IS 'Staff de GPI con privilegio sobre toda la plataforma. Pertenecer a esta tabla es independiente de tener membership en algún tenant.';
+COMMENT ON TABLE auth.platform_admins IS 'EN DESUSO, debe quedar vacía. Reservada para el backoffice externo. Ver 006_un_tenant_por_usuario.sql.';
 
 -- ── sessions ─────────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS auth.sessions (
@@ -199,7 +204,7 @@ CREATE TABLE IF NOT EXISTS auth.sessions (
 
 COMMENT ON TABLE  auth.sessions IS 'Refresh tokens. Los access token son JWT y no se guardan.';
 COMMENT ON COLUMN auth.sessions.token_hash IS 'SHA-256 del token, NUNCA el token. Con un volcado de esta tabla no se puede suplantar a nadie.';
-COMMENT ON COLUMN auth.sessions.tenant_id IS 'Tenant al que está scopeada la sesión. NULL = sesión de staff de GPI sin cliente activo.';
+COMMENT ON COLUMN auth.sessions.tenant_id IS 'Tenant al que está scopeada la sesión. Con una membresía por usuario, sale siempre de la única que tiene; NULL solo para una cuenta sin cliente asignado todavía.';
 
 CREATE INDEX IF NOT EXISTS sessions_user_idx ON auth.sessions (user_id);
 -- Para el barrido periódico de sesiones caducadas.
@@ -556,4 +561,73 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA crm
   GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO crm_test_app;
 ALTER DEFAULT PRIVILEGES IN SCHEMA auth GRANT USAGE, SELECT ON SEQUENCES TO crm_test_app;
 ALTER DEFAULT PRIVILEGES IN SCHEMA crm  GRANT USAGE, SELECT ON SEQUENCES TO crm_test_app;
+
+-- ══════════════════════════ 006_un_tenant_por_usuario.sql ══════════════════════════
+-- 006 — Un usuario pertenece como mucho a UN tenant.
+--
+-- QUÉ CAMBIA RESPECTO A 002: el modelo original permitía que una misma cuenta
+-- tuviera membresía en varios clientes, con un rol distinto en cada uno. Se
+-- descarta. **Cada cliente es completamente independiente y no puede haber
+-- permisos cruzados de ningún tipo**: ni una cuenta compartida entre dos
+-- clientes, ni un rol de plataforma que los vea a todos.
+--
+-- POR QUÉ EN EL MOTOR Y NO EN EL CÓDIGO: la independencia entre clientes es la
+-- promesa central del producto, y una promesa que depende de que ningún
+-- endpoint se olvide de comprobarla no es una garantía, es una intención. Un
+-- índice único no se olvida: si alguien —la aplicación, un backoffice, una
+-- consulta a mano en producción— intenta dar a un usuario una segunda
+-- membresía, el INSERT falla. Es el mismo razonamiento que RLS en 004: el
+-- aislamiento lo impone Postgres, no la buena memoria de quien escribe el
+-- backend.
+--
+-- Idempotente: se puede correr las veces que haga falta.
+
+-- ── 1. Membresías sobrantes ──────────────────────────────────────────────────
+-- Antes de poder crear el índice hay que dejar como mucho una fila por usuario.
+-- Se conserva la MÁS ANTIGUA: es la pertenencia original, y las que se añadieron
+-- después son justamente las cruzadas que este cambio prohíbe.
+--
+-- El desempate por `id` no es decorativo: las membresías sembradas en un mismo
+-- INSERT comparten `created_at` al microsegundo, así que sin él "la más antigua"
+-- no estaría definida y el resultado dependería del plan de ejecución.
+WITH ordenadas AS (
+  SELECT id,
+         row_number() OVER (PARTITION BY user_id ORDER BY created_at, id) AS n
+    FROM auth.tenant_memberships
+)
+DELETE FROM auth.tenant_memberships m
+ USING ordenadas o
+ WHERE m.id = o.id
+   AND o.n > 1;
+
+-- ── 2. La garantía ───────────────────────────────────────────────────────────
+-- Un usuario, una membresía. Esto sustituye en la práctica a
+-- `memberships_unica UNIQUE (tenant_id, user_id)` como garantía fuerte —aquella
+-- solo impedía la fila repetida DENTRO del mismo tenant, no la pertenencia a
+-- dos—, pero se deja la existente: no estorba y documenta la intención.
+CREATE UNIQUE INDEX IF NOT EXISTS memberships_un_tenant_por_usuario
+  ON auth.tenant_memberships (user_id);
+
+-- `memberships_user_idx` era un btree NO único sobre exactamente la misma
+-- columna. El índice único de arriba resuelve las mismas búsquedas
+-- (`WHERE user_id = $1`, que es la consulta del login), así que mantener los dos
+-- solo cuesta escrituras y espacio. Se retira el redundante.
+DROP INDEX IF EXISTS auth.memberships_user_idx;
+
+COMMENT ON TABLE auth.tenant_memberships IS
+  'Qué usuario pertenece a qué cliente y con qué rol. UNA membresía como máximo por usuario: los clientes son estancos y no hay permisos cruzados. Lo garantiza el índice único memberships_un_tenant_por_usuario, no la aplicación.';
+
+-- ── 3. platform_admins deja de usarse ────────────────────────────────────────
+-- No se borra la tabla: queda reservada para el backoffice externo desde el que
+-- se darán de alta clientes y sus usuarios admin. Pero mientras tanto se vacía,
+-- porque una fila aquí describía justo lo que este cambio elimina: una cuenta
+-- con visibilidad sobre todos los clientes. La API de autenticación ya no
+-- consulta esta tabla.
+--
+-- El DELETE va sin WHERE a propósito y se ejecuta en cada apply: si alguien
+-- concede un privilegio de plataforma a mano, la siguiente migración lo revoca.
+DELETE FROM auth.platform_admins;
+
+COMMENT ON TABLE auth.platform_admins IS
+  'EN DESUSO. La API de autenticación NO consulta esta tabla y debe permanecer vacía: ningún usuario de la aplicación puede tener visibilidad sobre varios clientes. Se conserva —vacía— reservada para el backoffice externo de alta de clientes, que se construirá aparte y es el único que volverá a escribir aquí.';
 

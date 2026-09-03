@@ -12,10 +12,12 @@ const password = z
 // sin límite es un vector de gasto: cada intento cuesta un hash de Argon2.
 const email = z.string().email('Email inválido').max(254).toLowerCase().trim();
 
+// Sin campo `tenant`: el cliente no se elige al entrar, se deduce. Cada usuario
+// pertenece a uno solo, así que dejar que lo pidiera solo serviría para
+// intentar entrar en el de otro.
 export const esquemaLogin = z.object({
   email,
   password: z.string().min(1).max(200),
-  tenant: z.string().max(62).optional(),
 });
 
 export const esquemaRefresh = z.object({
@@ -24,10 +26,6 @@ export const esquemaRefresh = z.object({
 
 export const esquemaLogout = z.object({
   todas: z.boolean().default(false),
-});
-
-export const esquemaCambiarTenant = z.object({
-  tenant: z.string().min(1).max(62),
 });
 
 export const esquemaCambiarPassword = z.object({
