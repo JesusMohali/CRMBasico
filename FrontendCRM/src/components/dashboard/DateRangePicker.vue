@@ -5,15 +5,10 @@ import { Calendar, type Options } from 'vanilla-calendar-pro';
 const props = defineProps<{ from: string; to: string }>();
 const emit = defineEmits<{ 'update:from': [string]; 'update:to': [string] }>();
 
-const open = ref(false);
-const root = ref<HTMLElement>();
-const calendarHost = ref<HTMLElement>();
-let calendar: Calendar | undefined;
-
-function todayIso() {
-	const now = new Date();
-	return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-}
+const open = ref(false)
+const root = ref<HTMLElement>()
+const calendarHost = ref<HTMLElement>()
+let calendar: Calendar | undefined
 
 function initCalendar() {
 	if (!calendarHost.value) return;
@@ -26,7 +21,7 @@ function initCalendar() {
 		displayMonthsCount: 2,
 		firstWeekday: 1,
 		locale: 'es',
-		displayDateMax: todayIso(),
+		displayDateMax: new Date,
 		selectedDates: initialDates,
 		selectedTheme: isDarkMode ? 'dark' : 'light',
 		onClickDate(self) {
