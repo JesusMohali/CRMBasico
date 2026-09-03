@@ -15,41 +15,33 @@
 				</div>
 			</template>
 			<template v-else>
-				<article
-					v-for="(card, index) in dashboard.callWidgets"
+				<component
+					:is="card.empty ? 'article' : 'RouterLink'"
+					v-for="card in dashboard.callWidgets"
 					:key="card.key"
+					:to="card.empty ? undefined : card.route"
 					class="crm-stat-card"
 					:style="{ '--card-color': card.color }">
 					<div v-if="card.empty" class="crm-stat-empty">
 						<i class="ki-filled ki-calendar-search" aria-hidden="true" />
 						<p>{{ card.emptyReason }}</p>
 					</div>
-					<template v-else>
-						<div class="crm-stat-content">
-							<div>
-								<p class="crm-stat-label">{{ card.label }}</p>
+					<div v-else class="crm-stat-content">
+						<div>
+							<p class="crm-stat-label">{{ card.label }}</p>
+							<div class="crm-stat-value-row">
 								<p class="crm-stat-value">{{ card.valueLabel }}</p>
 								<div class="crm-stat-change" :class="{ negative: card.negative }">
 									<i class="ki-filled" :class="card.negative ? 'ki-arrow-down' : 'ki-arrow-up'" aria-hidden="true" />
 									<span>{{ card.deltaLabel }}</span>
 								</div>
 							</div>
-							<div class="crm-stat-icon" aria-hidden="true">
-								<i class="ki-filled" :class="card.icon" />
-							</div>
 						</div>
-						<svg class="crm-stat-chart" viewBox="0 0 100 40" preserveAspectRatio="none" aria-hidden="true">
-							<defs>
-								<linearGradient :id="`calls-stat-gradient-${index}`" x1="0" y1="0" x2="0" y2="1">
-									<stop offset="0%" stop-color="var(--card-color)" stop-opacity=".18" />
-									<stop offset="100%" stop-color="var(--card-color)" stop-opacity="0" />
-								</linearGradient>
-							</defs>
-							<path :d="`${card.chart} L100,40 L0,40 Z`" :fill="`url(#calls-stat-gradient-${index})`" />
-							<path :d="card.chart" fill="none" stroke="var(--card-color)" stroke-width="1.5" vector-effect="non-scaling-stroke" />
-						</svg>
-					</template>
-				</article>
+						<div class="crm-stat-icon" aria-hidden="true">
+							<i class="ki-filled" :class="card.icon" />
+						</div>
+					</div>
+				</component>
 			</template>
 		</div>
 	</section>
@@ -85,7 +77,7 @@ const dashboard = useDashboardStore();
 	display: block;
 	min-width: 0;
 	overflow: hidden;
-	min-height: 176px;
+	min-height: 120px;
 	background: var(--surface);
 	border: 1px solid var(--border);
 	border-radius: 8px;
@@ -106,7 +98,8 @@ const dashboard = useDashboardStore();
 	align-items: flex-start;
 	justify-content: space-between;
 	gap: 12px;
-	padding: 17px 17px 0;
+	padding: 17px;
+	height: 100%;
 }
 
 .crm-stat-label {
@@ -119,19 +112,28 @@ const dashboard = useDashboardStore();
 	font-weight: 500;
 }
 
+.crm-stat-value-row {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	flex-wrap: wrap;
+}
+
 .crm-stat-value {
 	margin: 0;
 	color: var(--text);
-	font-size: 24px;
+	font-size: 30px;
 	font-weight: 700;
 	letter-spacing: -.02em;
 }
 
 .crm-stat-change {
-	display: flex;
+	display: inline-flex;
 	align-items: center;
-	gap: 5px;
-	margin-top: 7px;
+	gap: 4px;
+	padding: 2px 8px;
+	border-radius: 999px;
+	background: color-mix(in srgb, #19a66a 14%, transparent);
 	color: #19a66a;
 	font-size: 11px;
 	font-weight: 600;
@@ -142,6 +144,7 @@ const dashboard = useDashboardStore();
 }
 
 .crm-stat-change.negative {
+	background: color-mix(in srgb, #ef4444 14%, transparent);
 	color: #ef4444;
 }
 
@@ -158,16 +161,9 @@ const dashboard = useDashboardStore();
 	font-size: 20px;
 }
 
-.crm-stat-chart {
-	display: block;
-	width: 100%;
-	height: 54px;
-	margin-top: 18px;
-}
-
 .crm-stat-empty {
 	height: 100%;
-	min-height: 176px;
+	min-height: 120px;
 	display: flex;
 	flex-direction: column;
 	align-items: center;
@@ -189,7 +185,7 @@ const dashboard = useDashboardStore();
 }
 
 .crm-stat-skeleton {
-	min-height: 176px;
+	min-height: 120px;
 	padding: 17px;
 	display: flex;
 	flex-direction: column;
