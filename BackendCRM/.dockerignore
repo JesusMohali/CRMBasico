@@ -5,3 +5,4 @@ test
 *.md
 .env
 .env.*
+db

@@ -1,5 +1,5 @@
 -- GENERADO POR test/sync-schema.sh — NO EDITAR A MANO.
--- Fuente de verdad: repo de infra, sql/crm/*.sql
+-- Fuente de verdad: db/crm/*.sql
 -- Regenerado: 2026-09-03
 
 -- ══════════════════════════ 001_extensions_schemas.sql ══════════════════════════
@@ -290,7 +290,7 @@ CREATE TRIGGER memberships_updated_at BEFORE UPDATE ON auth.tenant_memberships
 -- 003 — Datos de negocio, ahora por tenant.
 --
 -- Es el esquema viejo (buffer / leads / leads_renovaciones) con tenant_id
--- obligatorio y los arreglos documentados en schema/CAMBIOS-VS-ANTERIOR.md.
+-- obligatorio y los arreglos documentados en ../CAMBIOS-VS-ANTERIOR.md.
 
 -- Las siete fases confirmadas. El orden del enum importa: ORDER BY fase las
 -- devuelve en secuencia de embudo, no alfabéticas.

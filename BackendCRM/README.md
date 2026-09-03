@@ -2,8 +2,10 @@
 
 Node 22 · TypeScript · Fastify 5 · PostgreSQL (la RDS compartida, base `crm_<env>`).
 
-El esquema de datos **no vive aquí**: es del repo de infraestructura (`sql/crm/*.sql`), y está
-documentado en `schema/ESQUEMA.md` de ese repo.
+El esquema de datos vive en **[`db/`](db/README.md)**: el DDL en [`db/crm/`](db/crm/) es la fuente
+de verdad —es literalmente lo que se aplica a la RDS— y está documentado en
+[`db/ESQUEMA.md`](db/ESQUEMA.md). Antes estaba en el repo de infraestructura; se movió aquí para que
+se pueda leer y cambiar sin clonar otro repo.
 
 ## Arrancar en local
 
@@ -25,10 +27,10 @@ Los tests levantan el esquema completo, siembran dos clientes y ejercitan la API
 comportamiento de la base (RLS, constraints, transacciones). El único doble de la suite es el
 cliente de SES: al otro lado de ese no hay un contenedor que levantar, hay AWS.
 
-`test/schema.sql` y `test/seed.sql` son copias consolidadas del DDL de infra, generadas por
-`test/sync-schema.sh`. Si el esquema cambia allí, hay que regenerarlas y commitearlas.
+`test/schema.sql` y `test/seed.sql` son copias consolidadas del DDL de `db/crm/`, generadas por
+`test/sync-schema.sh`. Si el esquema cambia, hay que regenerarlas y commitearlas.
 
-La semilla de infra trae **un solo usuario admin por cliente** —que es lo que creará el backoffice
+La semilla trae **un solo usuario admin por cliente** —que es lo que creará el backoffice
 externo al dar de alta uno—, así que las cuentas con los demás roles y los casos raros (una cuenta
 sin cliente, una que se va a bloquear) los crea `test/helpers.ts`. Ahí están todas, con un
 comentario que dice para qué sirve cada una. No van en la semilla: describirían un modelo de datos

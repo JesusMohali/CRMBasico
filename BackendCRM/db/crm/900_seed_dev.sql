@@ -1,7 +1,3 @@
--- GENERADO POR test/sync-schema.sh — NO EDITAR A MANO.
--- Fuente de verdad: db/crm/900_seed_dev.sql
--- Regenerado: 2026-09-03
-
 -- 900 — Datos sintéticos para dev. NO correr en prod.
 --
 -- Dos clientes con tres conversaciones cada uno, en fases distintas, y
@@ -26,6 +22,7 @@
 -- no hay forma de que coincida con nada. Sembrar una contraseña conocida en
 -- una base alcanzable sería regalar un acceso.
 
+\set ON_ERROR_STOP on
 
 DO $$
 DECLARE
