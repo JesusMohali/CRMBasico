@@ -5,18 +5,10 @@ import { Calendar, type FormatDateString, type Options } from 'vanilla-calendar-
 const props = defineProps<{ from: string; to: string }>();
 const emit = defineEmits<{ 'update:from': [string]; 'update:to': [string] }>();
 
-const open = ref(false);
-const root = ref<HTMLElement>();
-const calendarHost = ref<HTMLElement>();
-let calendar: Calendar | undefined;
-
-// displayDateMax no acepta un string cualquiera: la libreria lo tipa como
-// `${number}-${MM}-${DD}`. El valor que arma padStart() ya tiene ese formato, pero
-// TypeScript no lo puede inferir de una plantilla, de ahi la asercion.
-function todayIso(): FormatDateString {
-	const now = new Date();
-	return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}` as FormatDateString;
-}
+const open = ref(false)
+const root = ref<HTMLElement>()
+const calendarHost = ref<HTMLElement>()
+let calendar: Calendar | undefined
 
 function initCalendar() {
 	if (!calendarHost.value) return;
@@ -29,7 +21,7 @@ function initCalendar() {
 		displayMonthsCount: 2,
 		firstWeekday: 1,
 		locale: 'es',
-		displayDateMax: todayIso(),
+		displayDateMax: new Date,
 		selectedDates: initialDates,
 		selectedTheme: isDarkMode ? 'dark' : 'light',
 		onClickDate(self) {
