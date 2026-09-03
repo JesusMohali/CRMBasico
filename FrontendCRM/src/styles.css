@@ -43,6 +43,13 @@
     --header: 64px;
 }
 
+/* ── Scroll delgado por defecto en toda la app ────────────────────
+   Antes esto se declaraba selector por selector (chat, panel de
+   contacto, etc.), asi que cualquier contenedor nuevo con overflow
+   (un dropdown, una tabla) caia en el scroll nativo del navegador.
+   Ahora es el default global: usa los tokens de Metronic (--color-input /
+   --color-ring) para que el modo oscuro funcione solo, sin duplicar
+   colores a mano. */
 html {
     scrollbar-width: thin;
     scrollbar-color: var(--color-input) transparent;
@@ -2683,19 +2690,19 @@ h2 {
 }
 
 .status-pill.active {
-	background: color-mix(in srgb, var(--status-color, var(--primary)) 16%, transparent);
-	border-color: var(--status-color, var(--primary));
-	color: var(--status-color, var(--primary));
+	background: color-mix(in srgb, var(--fase-color, var(--primary)) 16%, transparent);
+	border-color: var(--fase-color, var(--primary));
+	color: var(--fase-color, var(--primary));
 	font-weight: 600;
 }
 
-.conv-status-badge {
+.conv-fase-badge {
 	display: inline-block;
 	padding: 4px 9px;
 	border-radius: 999px;
-	background: color-mix(in srgb, var(--status-color) 16%, transparent);
-	color: var(--status-color);
-	border: 1px solid color-mix(in srgb, var(--status-color) 30%, transparent);
+	background: color-mix(in srgb, var(--fase-color) 16%, transparent);
+	color: var(--fase-color);
+	border: 1px solid color-mix(in srgb, var(--fase-color) 30%, transparent);
 	font-size: 11px;
 	font-weight: 600;
 }

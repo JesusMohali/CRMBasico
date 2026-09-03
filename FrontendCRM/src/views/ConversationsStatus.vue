@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router';
-import { useConversationsStore, CONVERSATION_STATUS_COLORS } from '../stores';
+import { useConversationsStore } from '../stores';
+import { FASE_COLORS } from '../constants/fases';
 
 const router = useRouter();
 const conversations = useConversationsStore();
@@ -23,18 +24,18 @@ function handleSearch(event: Event) {
 		</header>
 
 		<section class="status-summary">
-			<button class="status-pill" :class="{ active: conversations.statusFilter === 'Todas' }" type="button" @click="conversations.setStatusFilter('Todas')">
+			<button class="status-pill" :class="{ active: conversations.phaseFilter === 'Todas' }" type="button" @click="conversations.setPhaseFilter('Todas')">
 				<span>Todas</span><b>{{ conversations.conversations.length }}</b>
 			</button>
 			<button
-				v-for="item in conversations.countsByStatus"
-				:key="item.status"
+				v-for="item in conversations.countsByFase"
+				:key="item.fase"
 				class="status-pill"
-				:class="{ active: conversations.statusFilter === item.status }"
-				:style="{ '--status-color': CONVERSATION_STATUS_COLORS[item.status] }"
+				:class="{ active: conversations.phaseFilter === item.fase }"
+				:style="{ '--fase-color': FASE_COLORS[item.fase] }"
 				type="button"
-				@click="conversations.setStatusFilter(item.status)">
-				<span>{{ item.status }}</span><b>{{ item.total }}</b>
+				@click="conversations.setPhaseFilter(item.fase)">
+				<span>{{ item.fase }}</span><b>{{ item.total }}</b>
 			</button>
 		</section>
 
@@ -42,10 +43,10 @@ function handleSearch(event: Event) {
 			<div class="card-head">
 				<div>
 					<h2>Conversaciones</h2>
-					<p>Estado y antigüedad de cada conversación del periodo</p>
+					<p>Fase y antigüedad de cada conversación del periodo</p>
 				</div>
 				<div class="table-tools">
-					<label class="search-field">⌕<input placeholder="Buscar conversación" :value="conversations.query" @input="handleSearch" /></label>
+					<label class="search-field">⌕<input placeholder="Buscar por nombre, correo, canal, fase..." :value="conversations.query" @input="handleSearch" /></label>
 				</div>
 			</div>
 			<div class="table-wrap">
@@ -53,8 +54,9 @@ function handleSearch(event: Event) {
 					<thead>
 						<tr>
 							<th>Usuario</th>
+							<th>Correo</th>
 							<th>Canal</th>
-							<th>Estado</th>
+							<th>Fase</th>
 							<th>Antigüedad</th>
 							<th>Última actualización</th>
 							<th>Motivo</th>
@@ -66,8 +68,9 @@ function handleSearch(event: Event) {
 							<td>
 								<div class="team-name"><span class="team-mark">{{ item.name.slice(0, 1) }}</span><b>{{ item.name }}</b></div>
 							</td>
+							<td>{{ item.email }}</td>
 							<td>{{ item.channel }}</td>
-							<td><span class="conv-status-badge" :style="{ '--status-color': CONVERSATION_STATUS_COLORS[item.status] }">{{ item.status }}</span></td>
+							<td><span class="conv-fase-badge" :style="{ '--fase-color': FASE_COLORS[item.phase] }">{{ item.phase }}</span></td>
 							<td>{{ item.antiguedad }}</td>
 							<td>{{ item.updated }}</td>
 							<td>{{ item.discardReason ?? '—' }}</td>
@@ -76,7 +79,7 @@ function handleSearch(event: Event) {
 							</td>
 						</tr>
 						<tr v-if="!conversations.filtered.length">
-							<td colspan="7" class="table-empty">No hay conversaciones que coincidan con la búsqueda.</td>
+							<td colspan="8" class="table-empty">No hay conversaciones que coincidan con la búsqueda.</td>
 						</tr>
 					</tbody>
 				</table>

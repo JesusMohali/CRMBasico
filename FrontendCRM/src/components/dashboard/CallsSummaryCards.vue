@@ -15,11 +15,9 @@
 				</div>
 			</template>
 			<template v-else>
-				<component
-					:is="card.empty ? 'article' : 'RouterLink'"
+				<article
 					v-for="card in dashboard.callWidgets"
 					:key="card.key"
-					:to="card.empty ? undefined : card.route"
 					class="crm-stat-card"
 					:style="{ '--card-color': card.color }">
 					<div v-if="card.empty" class="crm-stat-empty">
@@ -41,7 +39,7 @@
 							<i class="ki-filled" :class="card.icon" />
 						</div>
 					</div>
-				</component>
+				</article>
 			</template>
 		</div>
 	</section>

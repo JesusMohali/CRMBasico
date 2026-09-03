@@ -68,23 +68,12 @@ export const useTeamsStore = defineStore('teams', () => {
   return { query, page, selected, phaseFilter, teams, filtered, pages, visible, byFase, search, setPhaseFilter, toggle }
 })
 
-export type ConversationStatus = 'Nueva' | 'En conversación' | 'Esperando respuesta' | 'Agendada' | 'Descartada'
-
-export const CONVERSATION_STATUSES: ConversationStatus[] = ['Nueva', 'En conversación', 'Esperando respuesta', 'Agendada', 'Descartada']
-
-export const CONVERSATION_STATUS_COLORS: Record<ConversationStatus, string> = {
-  Nueva: '#2b91e8',
-  'En conversación': '#635bff',
-  'Esperando respuesta': '#e9a11b',
-  Agendada: '#10a7a7',
-  Descartada: '#ef4444',
-}
-
 interface ConversationRecord {
   id: number
   name: string
+  email: string
   channel: string
-  status: ConversationStatus
+  phase: Fase
   antiguedad: string
   updated: string
   discardReason?: string
@@ -93,33 +82,40 @@ interface ConversationRecord {
 
 export const useConversationsStore = defineStore('conversationsStatus', () => {
   const query = ref('')
-  const statusFilter = ref<ConversationStatus | 'Todas'>('Todas')
+  const phaseFilter = ref<Fase | 'Todas'>('Todas')
 
   const conversations = ref<ConversationRecord[]>([
-    { id: 1, name: 'Sarah Chen', channel: 'Instagram', status: 'Agendada', antiguedad: '2 días', updated: '21 Oct, 2024', chatId: 1 },
-    { id: 2, name: 'Marcus Johnson', channel: 'Instagram', status: 'En conversación', antiguedad: '5 horas', updated: '20 Oct, 2024', chatId: 2 },
-    { id: 3, name: 'Alex Rivera', channel: 'Instagram', status: 'Nueva', antiguedad: '1 hora', updated: '19 Oct, 2024', chatId: 3 },
-    { id: 4, name: 'Priya Sharma', channel: 'Instagram', status: 'Esperando respuesta', antiguedad: '1 día', updated: '18 Oct, 2024', chatId: 5 },
-    { id: 5, name: 'Laura Fernández', channel: 'Instagram', status: 'Descartada', antiguedad: '4 días', updated: '17 Oct, 2024', discardReason: 'No calificó' },
-    { id: 6, name: 'Diego Salas', channel: 'Instagram', status: 'Descartada', antiguedad: '6 días', updated: '16 Oct, 2024', discardReason: 'No respondió' },
-    { id: 7, name: 'Valentina Ríos', channel: 'Instagram', status: 'Nueva', antiguedad: '20 minutos', updated: '21 Oct, 2024' },
-    { id: 8, name: 'Tomás Herrera', channel: 'Instagram', status: 'En conversación', antiguedad: '3 horas', updated: '21 Oct, 2024' },
+    { id: 1, name: 'Sarah Chen', email: 'sarah.chen@example.com', channel: 'Instagram', phase: 'Compromiso', antiguedad: '2 días', updated: '21 Oct, 2024', chatId: 1 },
+    { id: 2, name: 'Marcus Johnson', email: 'marcus.johnson@example.com', channel: 'Instagram', phase: 'Llamada', antiguedad: '5 horas', updated: '20 Oct, 2024', chatId: 2 },
+    { id: 3, name: 'Alex Rivera', email: 'alex.rivera@example.com', channel: 'Instagram', phase: 'Situación', antiguedad: '1 hora', updated: '19 Oct, 2024', chatId: 3 },
+    { id: 4, name: 'Priya Sharma', email: 'priya.sharma@example.com', channel: 'Instagram', phase: 'Obstáculo', antiguedad: '1 día', updated: '18 Oct, 2024', chatId: 5 },
+    { id: 5, name: 'Laura Fernández', email: 'laura.fernandez@example.com', channel: 'Instagram', phase: 'Objeción', antiguedad: '4 días', updated: '17 Oct, 2024', discardReason: 'No calificó' },
+    { id: 6, name: 'Diego Salas', email: 'diego.salas@example.com', channel: 'Instagram', phase: 'Objeción', antiguedad: '6 días', updated: '16 Oct, 2024', discardReason: 'No respondió' },
+    { id: 7, name: 'Valentina Ríos', email: 'valentina.rios@example.com', channel: 'Instagram', phase: 'Visión', antiguedad: '20 minutos', updated: '21 Oct, 2024' },
+    { id: 8, name: 'Tomás Herrera', email: 'tomas.herrera@example.com', channel: 'Instagram', phase: 'Link', antiguedad: '3 horas', updated: '21 Oct, 2024' },
   ])
 
-  const filtered = computed(() => conversations.value.filter((item) =>
-    (statusFilter.value === 'Todas' || item.status === statusFilter.value) &&
-    item.name.toLowerCase().includes(query.value.toLowerCase())
-  ))
+  const filtered = computed(() => {
+    const q = query.value.trim().toLowerCase()
+    return conversations.value.filter((item) => {
+      if (phaseFilter.value !== 'Todas' && item.phase !== phaseFilter.value) return false
+      if (!q) return true
+      const haystack = [item.name, item.email, item.channel, item.phase, item.antiguedad, item.updated, item.discardReason ?? '']
+        .join(' ')
+        .toLowerCase()
+      return haystack.includes(q)
+    })
+  })
 
-  const countsByStatus = computed(() => CONVERSATION_STATUSES.map((status) => ({
-    status,
-    total: conversations.value.filter((item) => item.status === status).length,
+  const countsByFase = computed(() => FASES.map((fase) => ({
+    fase,
+    total: conversations.value.filter((item) => item.phase === fase).length,
   })))
 
   function search(value: string) { query.value = value }
-  function setStatusFilter(value: ConversationStatus | 'Todas') { statusFilter.value = value }
+  function setPhaseFilter(value: Fase | 'Todas') { phaseFilter.value = value }
 
-  return { query, statusFilter, conversations, filtered, countsByStatus, search, setStatusFilter }
+  return { query, phaseFilter, conversations, filtered, countsByFase, search, setPhaseFilter }
 })
 
 export type AttendanceStatus = 'Show' | 'No-show' | 'Pendiente'
