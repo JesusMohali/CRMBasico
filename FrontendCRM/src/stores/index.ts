@@ -227,6 +227,23 @@ export function oportunidades(m: FunnelInputs) {
   return m.conversaciones * m.ratioAgenda * m.tasaShow * m.tasaCierre * m.ticketPromedio
 }
 
+export function llamadasAgendadas(m: FunnelInputs) {
+  return m.conversaciones * m.ratioAgenda
+}
+
+export function llamadasShow(m: FunnelInputs) {
+  return llamadasAgendadas(m) * m.tasaShow
+}
+
+export function llamadasNoShow(m: FunnelInputs) {
+  return llamadasAgendadas(m) - llamadasShow(m)
+}
+
+// Llamadas cuyo horario ya se resolvió (mostraron o no), sin contar las pendientes/futuras.
+export function llamadasRealizadas(m: FunnelInputs) {
+  return llamadasShow(m) + llamadasNoShow(m)
+}
+
 const numberFormatter = new Intl.NumberFormat('es-ES')
 const percentFormatter = new Intl.NumberFormat('es-ES', { minimumFractionDigits: 1, maximumFractionDigits: 1 })
 const currencyFormatter = new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 })
@@ -242,6 +259,11 @@ function formatDelta(actual: number, anterior: number, suffix: '%' | 'pts', enPu
   const delta = enPuntos ? (actual - anterior) * 100 : ((actual - anterior) / anterior) * 100
   const signo = delta >= 0 ? '+' : ''
   return { label: `${signo}${percentFormatter.format(delta)} ${suffix}`, negative: delta < 0 }
+}
+
+// Para métricas donde subir es malo (ej. no-show): invierte el color sin tocar el signo del texto.
+function invertGoodBad(delta: { label: string; negative: boolean }) {
+  return delta.label === '—' ? delta : { label: delta.label, negative: !delta.negative }
 }
 
 export interface DashboardWidget {
@@ -271,6 +293,19 @@ const WIDGET_SHELL = [
   { key: 'ratioAgenda', label: 'Ratio conversación → agenda', icon: 'ki-calendar-tick', color: '#10a7a7', route: '/agendas' },
   { key: 'oportunidades', label: 'Oportunidades', icon: 'ki-chart-pie-simple', color: '#2b91e8', route: '/oportunidades' },
   { key: 'facturacion', label: 'Facturación', icon: 'ki-wallet', color: '#e9a11b', route: '/finanzas' },
+] as const
+
+// Sección aparte al final del dashboard: solo llamadas realizadas / show / no-show.
+const CALL_CHART_PATHS = [
+  'M0,34 L9,31 L18,33 L27,26 L36,29 L45,22 L55,25 L64,18 L73,21 L82,14 L91,17 L100,10',
+  'M0,33 L9,30 L18,31 L27,24 L36,27 L45,19 L55,22 L64,15 L73,17 L82,11 L91,13 L100,6',
+  'M0,8 L9,11 L18,9 L27,14 L36,12 L45,17 L55,15 L64,20 L73,18 L82,24 L91,22 L100,28',
+]
+
+const CALL_WIDGET_SHELL = [
+  { key: 'llamadasRealizadas', label: 'Llamadas realizadas', icon: 'ki-call', color: '#7239ea', route: '/agendas' },
+  { key: 'llamadasShow', label: 'Llamadas show', icon: 'ki-check-circle', color: '#17c653', route: '/agendas' },
+  { key: 'llamadasNoShow', label: 'Llamadas no-show', icon: 'ki-cross-circle', color: '#f1416c', route: '/agendas' },
 ] as const
 
 export const useDashboardStore = defineStore('dashboard', () => {
@@ -328,7 +363,33 @@ export const useDashboardStore = defineStore('dashboard', () => {
     ]
   })
 
-  return { period, customFrom, customTo, loading, currentFunnel, widgets, setPeriod }
+  // Sección aparte al final del dashboard (ver CallsSummaryCards.vue).
+  const callWidgets = computed<DashboardWidget[]>(() => {
+    if (isRangeIncomplete.value) {
+      return CALL_WIDGET_SHELL.map((shell, index) => ({
+        ...shell,
+        chart: CALL_CHART_PATHS[index],
+        empty: true,
+        emptyReason: 'Elegí un rango de fechas para ver este dato.',
+        valueLabel: '',
+        deltaLabel: '',
+        negative: false,
+      }))
+    }
+
+    const { current, previous } = metricsByPeriod[period.value]
+    const dRealizadas = formatDelta(llamadasRealizadas(current), llamadasRealizadas(previous), '%')
+    const dShow = formatDelta(llamadasShow(current), llamadasShow(previous), '%')
+    const dNoShow = invertGoodBad(formatDelta(llamadasNoShow(current), llamadasNoShow(previous), '%'))
+
+    return [
+      { ...CALL_WIDGET_SHELL[0], chart: CALL_CHART_PATHS[0], empty: false, emptyReason: '', valueLabel: formatEntero(llamadasRealizadas(current)), deltaLabel: dRealizadas.label, negative: dRealizadas.negative },
+      { ...CALL_WIDGET_SHELL[1], chart: CALL_CHART_PATHS[1], empty: false, emptyReason: '', valueLabel: formatEntero(llamadasShow(current)), deltaLabel: dShow.label, negative: dShow.negative },
+      { ...CALL_WIDGET_SHELL[2], chart: CALL_CHART_PATHS[2], empty: false, emptyReason: '', valueLabel: formatEntero(llamadasNoShow(current)), deltaLabel: dNoShow.label, negative: dNoShow.negative },
+    ]
+  })
+
+  return { period, customFrom, customTo, loading, currentFunnel, widgets, callWidgets, setPeriod }
 })
 
 interface ClosedMonth {

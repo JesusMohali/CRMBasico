@@ -43,6 +43,7 @@
 			<TeamsTable />
 			<LeadsPhaseChart />
 		</section>
+		<CallsSummaryCards />
 	</div>
 </template>
 <script setup lang="ts">
@@ -51,6 +52,7 @@ import TeamsTable from './TeamsTable.vue'
 import CardInfo from './CardInfo.vue'
 import LeadsPhaseChart from './LeadsPhaseChart.vue'
 import DateRangePicker from './DateRangePicker.vue'
+import CallsSummaryCards from './CallsSummaryCards.vue'
 import { PERIODS, useDashboardStore } from '../../stores'
 const dashboard = useDashboardStore();
 const periodMenuOpen = ref(false)
