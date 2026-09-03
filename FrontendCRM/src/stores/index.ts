@@ -68,23 +68,12 @@ export const useTeamsStore = defineStore('teams', () => {
   return { query, page, selected, phaseFilter, teams, filtered, pages, visible, byFase, search, setPhaseFilter, toggle }
 })
 
-export type ConversationStatus = 'Nueva' | 'En conversación' | 'Esperando respuesta' | 'Agendada' | 'Descartada'
-
-export const CONVERSATION_STATUSES: ConversationStatus[] = ['Nueva', 'En conversación', 'Esperando respuesta', 'Agendada', 'Descartada']
-
-export const CONVERSATION_STATUS_COLORS: Record<ConversationStatus, string> = {
-  Nueva: '#2b91e8',
-  'En conversación': '#635bff',
-  'Esperando respuesta': '#e9a11b',
-  Agendada: '#10a7a7',
-  Descartada: '#ef4444',
-}
-
 interface ConversationRecord {
   id: number
   name: string
+  email: string
   channel: string
-  status: ConversationStatus
+  phase: Fase
   antiguedad: string
   updated: string
   discardReason?: string
@@ -93,33 +82,40 @@ interface ConversationRecord {
 
 export const useConversationsStore = defineStore('conversationsStatus', () => {
   const query = ref('')
-  const statusFilter = ref<ConversationStatus | 'Todas'>('Todas')
+  const phaseFilter = ref<Fase | 'Todas'>('Todas')
 
   const conversations = ref<ConversationRecord[]>([
-    { id: 1, name: 'Sarah Chen', channel: 'Instagram', status: 'Agendada', antiguedad: '2 días', updated: '21 Oct, 2024', chatId: 1 },
-    { id: 2, name: 'Marcus Johnson', channel: 'Instagram', status: 'En conversación', antiguedad: '5 horas', updated: '20 Oct, 2024', chatId: 2 },
-    { id: 3, name: 'Alex Rivera', channel: 'Instagram', status: 'Nueva', antiguedad: '1 hora', updated: '19 Oct, 2024', chatId: 3 },
-    { id: 4, name: 'Priya Sharma', channel: 'Instagram', status: 'Esperando respuesta', antiguedad: '1 día', updated: '18 Oct, 2024', chatId: 5 },
-    { id: 5, name: 'Laura Fernández', channel: 'Instagram', status: 'Descartada', antiguedad: '4 días', updated: '17 Oct, 2024', discardReason: 'No calificó' },
-    { id: 6, name: 'Diego Salas', channel: 'Instagram', status: 'Descartada', antiguedad: '6 días', updated: '16 Oct, 2024', discardReason: 'No respondió' },
-    { id: 7, name: 'Valentina Ríos', channel: 'Instagram', status: 'Nueva', antiguedad: '20 minutos', updated: '21 Oct, 2024' },
-    { id: 8, name: 'Tomás Herrera', channel: 'Instagram', status: 'En conversación', antiguedad: '3 horas', updated: '21 Oct, 2024' },
+    { id: 1, name: 'Sarah Chen', email: 'sarah.chen@example.com', channel: 'Instagram', phase: 'Compromiso', antiguedad: '2 días', updated: '21 Oct, 2024', chatId: 1 },
+    { id: 2, name: 'Marcus Johnson', email: 'marcus.johnson@example.com', channel: 'Instagram', phase: 'Llamada', antiguedad: '5 horas', updated: '20 Oct, 2024', chatId: 2 },
+    { id: 3, name: 'Alex Rivera', email: 'alex.rivera@example.com', channel: 'Instagram', phase: 'Situación', antiguedad: '1 hora', updated: '19 Oct, 2024', chatId: 3 },
+    { id: 4, name: 'Priya Sharma', email: 'priya.sharma@example.com', channel: 'Instagram', phase: 'Obstáculo', antiguedad: '1 día', updated: '18 Oct, 2024', chatId: 5 },
+    { id: 5, name: 'Laura Fernández', email: 'laura.fernandez@example.com', channel: 'Instagram', phase: 'Objeción', antiguedad: '4 días', updated: '17 Oct, 2024', discardReason: 'No calificó' },
+    { id: 6, name: 'Diego Salas', email: 'diego.salas@example.com', channel: 'Instagram', phase: 'Objeción', antiguedad: '6 días', updated: '16 Oct, 2024', discardReason: 'No respondió' },
+    { id: 7, name: 'Valentina Ríos', email: 'valentina.rios@example.com', channel: 'Instagram', phase: 'Visión', antiguedad: '20 minutos', updated: '21 Oct, 2024' },
+    { id: 8, name: 'Tomás Herrera', email: 'tomas.herrera@example.com', channel: 'Instagram', phase: 'Link', antiguedad: '3 horas', updated: '21 Oct, 2024' },
   ])
 
-  const filtered = computed(() => conversations.value.filter((item) =>
-    (statusFilter.value === 'Todas' || item.status === statusFilter.value) &&
-    item.name.toLowerCase().includes(query.value.toLowerCase())
-  ))
+  const filtered = computed(() => {
+    const q = query.value.trim().toLowerCase()
+    return conversations.value.filter((item) => {
+      if (phaseFilter.value !== 'Todas' && item.phase !== phaseFilter.value) return false
+      if (!q) return true
+      const haystack = [item.name, item.email, item.channel, item.phase, item.antiguedad, item.updated, item.discardReason ?? '']
+        .join(' ')
+        .toLowerCase()
+      return haystack.includes(q)
+    })
+  })
 
-  const countsByStatus = computed(() => CONVERSATION_STATUSES.map((status) => ({
-    status,
-    total: conversations.value.filter((item) => item.status === status).length,
+  const countsByFase = computed(() => FASES.map((fase) => ({
+    fase,
+    total: conversations.value.filter((item) => item.phase === fase).length,
   })))
 
   function search(value: string) { query.value = value }
-  function setStatusFilter(value: ConversationStatus | 'Todas') { statusFilter.value = value }
+  function setPhaseFilter(value: Fase | 'Todas') { phaseFilter.value = value }
 
-  return { query, statusFilter, conversations, filtered, countsByStatus, search, setStatusFilter }
+  return { query, phaseFilter, conversations, filtered, countsByFase, search, setPhaseFilter }
 })
 
 export type AttendanceStatus = 'Show' | 'No-show' | 'Pendiente'
@@ -495,4 +491,100 @@ export const useFinanceStore = defineStore('finance', () => {
     addExpense,
     removeExpense,
   }
+})
+
+// ── Fase 4 · Carpetas de chat ───────────────────────────────────────
+// Agrupan conversaciones por un único filtro a la vez (etiqueta, fase
+// o tiempo desde el último mensaje). "Todos" no vive acá: es un grupo
+// fijo que arma el propio ChatSidebar, así nunca se puede borrar.
+export type ChatFolderFilterField = 'tag' | 'phase' | 'recency'
+
+export const CHAT_FOLDER_FILTER_FIELDS: { value: ChatFolderFilterField; label: string }[] = [
+  { value: 'tag', label: 'Etiqueta' },
+  { value: 'phase', label: 'Fase' },
+  { value: 'recency', label: 'Última vez que escribieron' },
+]
+
+export interface ChatFolder {
+  id: number
+  name: string
+  icon: string
+  color: string
+  filterField: ChatFolderFilterField
+  filterValue: string
+}
+
+// Bucket de recencia a partir de una fecha real — mismo criterio que
+// LEAD_TIME_BUCKETS (Agendas), reusado acá para "tiempo desde el
+// último mensaje".
+export function recencyBucket(date: Date, now: Date = new Date()): LeadTimeBucket {
+  const days = Math.floor((now.getTime() - date.getTime()) / 86400000)
+  if (days <= 0) return 'Mismo día'
+  if (days <= 2) return '1-2 días'
+  if (days <= 7) return '3-7 días'
+  return '+7 días'
+}
+
+export const useChatFoldersStore = defineStore('chatFolders', () => {
+  const folders = ref<ChatFolder[]>([
+    { id: 1, name: 'Prioritarios', icon: 'ki-flag', color: '#f1416c', filterField: 'tag', filterValue: 'Prioritario' },
+  ])
+  let nextId = 2
+
+  function addFolder(input: Omit<ChatFolder, 'id'>) {
+    folders.value.push({ id: nextId++, ...input })
+  }
+
+  function updateFolder(id: number, input: Omit<ChatFolder, 'id'>) {
+    const folder = folders.value.find((item) => item.id === id)
+    if (folder) Object.assign(folder, input)
+  }
+
+  function removeFolder(id: number) {
+    folders.value = folders.value.filter((item) => item.id !== id)
+  }
+
+  return { folders, addFolder, updateFolder, removeFolder }
+})
+
+// ── Confirm dialog global ────────────────────────────────────────────
+// Reemplaza al confirm() nativo del navegador. Cualquier componente
+// puede hacer `await useConfirmStore().ask({ message: '...' })` y le
+// llega un booleano, igual que con confirm(), pero con la estética
+// de la app. El componente que lo renderiza es ConfirmDialog.vue,
+// montado una sola vez en App.vue.
+interface ConfirmOptions {
+  title?: string
+  message: string
+  confirmText?: string
+  cancelText?: string
+  danger?: boolean
+}
+
+export const useConfirmStore = defineStore('confirm', () => {
+  const open = ref(false)
+  const title = ref('')
+  const message = ref('')
+  const confirmText = ref('Confirmar')
+  const cancelText = ref('Cancelar')
+  const danger = ref(false)
+  let resolver: ((value: boolean) => void) | null = null
+
+  function ask(options: ConfirmOptions): Promise<boolean> {
+    title.value = options.title ?? ''
+    message.value = options.message
+    confirmText.value = options.confirmText ?? 'Confirmar'
+    cancelText.value = options.cancelText ?? 'Cancelar'
+    danger.value = options.danger ?? false
+    open.value = true
+    return new Promise((resolve) => { resolver = resolve })
+  }
+
+  function resolve(value: boolean) {
+    open.value = false
+    resolver?.(value)
+    resolver = null
+  }
+
+  return { open, title, message, confirmText, cancelText, danger, ask, resolve }
 })

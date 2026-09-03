@@ -6,7 +6,7 @@ const query = ref('');
 </script>
 <template>
 	<div class="overlay" @click.self="ui.searchOpen = false">
-		<div class="modal kt-modal">
+		<div class="modal">
 			<div class="modal-head">
 				<h2>Search</h2>
 				<button class="icon-btn" @click="ui.searchOpen = false">×</button>

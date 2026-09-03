@@ -43,6 +43,39 @@
     --header: 64px;
 }
 
+/* ── Scroll delgado por defecto en toda la app ────────────────────
+   Antes esto se declaraba selector por selector (chat, panel de
+   contacto, etc.), asi que cualquier contenedor nuevo con overflow
+   (un dropdown, una tabla) caia en el scroll nativo del navegador.
+   Ahora es el default global: usa los tokens de Metronic (--color-input /
+   --color-ring) para que el modo oscuro funcione solo, sin duplicar
+   colores a mano. */
+html {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-input) transparent;
+}
+
+*::-webkit-scrollbar {
+    width: 7px;
+    height: 7px;
+}
+
+*::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+    background: var(--color-input);
+    border: 2px solid transparent;
+    border-radius: 8px;
+    background-clip: content-box;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+    background: var(--color-ring);
+    background-clip: content-box;
+}
+
 * {
     box-sizing: border-box;
 }
@@ -1830,6 +1863,209 @@ h2 {
     border-radius: 50%;
 }
 
+/* ── Fase 4 · Carpetas de chat ────────────────────────────────────── */
+.folder-group + .folder-group {
+    margin-top: 2px;
+}
+
+.folder-group-head {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+}
+
+.folder-group-toggle {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 6px;
+    border-radius: 6px;
+    color: var(--text);
+    background: transparent;
+    font-size: 12px;
+    font-weight: 600;
+    text-align: left;
+}
+
+.folder-group-toggle:hover {
+    background: var(--background);
+}
+
+.folder-group-toggle>i:first-child {
+    flex: none;
+    font-size: 15px;
+}
+
+.folder-group-toggle span {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.folder-group-toggle small {
+    flex: none;
+    padding: 1px 6px;
+    border-radius: 999px;
+    background: var(--background);
+    color: var(--muted-foreground);
+    font-size: 10px;
+    font-weight: 600;
+}
+
+.folder-group-toggle .folder-chevron {
+    flex: none;
+    font-size: 10px;
+    color: var(--muted-foreground);
+}
+
+.folder-group-actions {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    flex: none;
+    padding-right: 4px;
+}
+
+.folder-group-actions .icon-btn {
+    min-width: 24px;
+    height: 24px;
+    font-size: 13px;
+}
+
+.folder-group-chats {
+    display: flex;
+    flex-direction: column;
+    padding-bottom: 6px;
+}
+
+.folder-form {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding: 20px;
+}
+
+.icon-picker,
+.color-picker {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 8px;
+}
+
+.icon-picker-option {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 36px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--background);
+    color: var(--muted-foreground);
+    font-size: 15px;
+}
+
+.icon-picker-option:hover {
+    border-color: var(--picker-color);
+    color: var(--picker-color);
+}
+
+.icon-picker-option.active {
+    border-color: var(--picker-color);
+    background: color-mix(in srgb, var(--picker-color) 14%, transparent);
+    color: var(--picker-color);
+}
+
+.color-picker-option {
+    height: 28px;
+    border: 2px solid transparent;
+    border-radius: 6px;
+    background: var(--picker-color);
+}
+
+.color-picker-option.active {
+    border-color: var(--text);
+}
+
+.modal-foot {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    padding-top: 4px;
+    border-top: 1px solid var(--border);
+}
+
+.folder-modal .modal-foot {
+    margin: 0 -20px -20px;
+    padding: 16px 20px;
+}
+
+.confirm-modal {
+    width: min(400px, 100%);
+}
+
+.confirm-body {
+    margin: 0;
+    padding: 20px;
+    color: var(--text);
+    font-size: 13px;
+    line-height: 1.6;
+}
+
+.confirm-modal .modal-head {
+    padding-bottom: 0;
+    border-bottom: 0;
+}
+
+.confirm-modal .modal-foot {
+    padding: 16px 20px;
+}
+
+/* ── Animación de entrada/salida tipo SweetAlert ─────────────────────
+   El fondo hace un fade simple; la caja del modal (hijo directo, vía
+   selector descendiente) hace el "pop" con rebote. Mismas duraciones
+   en ambos para que no se corte una animación cuando Vue saca la
+   clase *-active al terminar la del elemento raíz (.overlay). */
+.modal-pop-enter-active {
+    animation: modal-pop-backdrop-in .3s ease-out;
+}
+
+.modal-pop-enter-active .modal {
+    animation: modal-pop-in .3s cubic-bezier(.34, 1.56, .64, 1);
+}
+
+.modal-pop-leave-active {
+    animation: modal-pop-backdrop-out .15s ease-in forwards;
+}
+
+.modal-pop-leave-active .modal {
+    animation: modal-pop-out .15s ease-in forwards;
+}
+
+@keyframes modal-pop-backdrop-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes modal-pop-backdrop-out {
+    from { opacity: 1; }
+    to { opacity: 0; }
+}
+
+@keyframes modal-pop-in {
+    0% { opacity: 0; transform: scale(.72); }
+    100% { opacity: 1; transform: scale(1); }
+}
+
+@keyframes modal-pop-out {
+    0% { opacity: 1; transform: scale(1); }
+    100% { opacity: 0; transform: scale(.88); }
+}
+
 .chat-window {
     min-width: 0;
     min-height: 0;
@@ -2089,53 +2325,6 @@ h2 {
     overflow-x: hidden;
 }
 
-.conversation-list::-webkit-scrollbar,
-.message-list::-webkit-scrollbar {
-    width: 7px;
-}
-
-.conversation-list::-webkit-scrollbar-track,
-.message-list::-webkit-scrollbar-track {
-    background: transparent;
-}
-
-.conversation-list::-webkit-scrollbar-thumb,
-.message-list::-webkit-scrollbar-thumb {
-    background: #c7ccd4;
-    border: 2px solid transparent;
-    border-radius: 8px;
-    background-clip: content-box;
-}
-
-.conversation-list::-webkit-scrollbar-thumb:hover,
-.message-list::-webkit-scrollbar-thumb:hover {
-    background: #9da5b1;
-    background-clip: content-box;
-}
-
-:root.dark .conversation-list::-webkit-scrollbar-thumb,
-:root.dark .message-list::-webkit-scrollbar-thumb {
-    background: #4a515d;
-    background-clip: content-box;
-}
-
-:root.dark .conversation-list::-webkit-scrollbar-thumb:hover,
-:root.dark .message-list::-webkit-scrollbar-thumb:hover {
-    background: #697382;
-    background-clip: content-box;
-}
-
-.conversation-list,
-.message-list {
-    scrollbar-width: thin;
-    scrollbar-color: #c7ccd4 transparent;
-}
-
-:root.dark .conversation-list,
-:root.dark .message-list {
-    scrollbar-color: #4a515d transparent;
-}
-
 /* El Topbar solo aparece cuando el Sidebar se oculta */
 .content-shell>.topbar {
     display: none;
@@ -2280,42 +2469,6 @@ h2 {
 	overflow-y: auto;
 	overflow-x: hidden;
 	padding: 0 20px 24px;
-	scrollbar-width: thin;
-	scrollbar-color: #c7ccd4 transparent;
-}
-
-.contact-panel-body::-webkit-scrollbar {
-	width: 7px;
-}
-
-.contact-panel-body::-webkit-scrollbar-track {
-	background: transparent;
-}
-
-.contact-panel-body::-webkit-scrollbar-thumb {
-	background: #c7ccd4;
-	border: 2px solid transparent;
-	border-radius: 8px;
-	background-clip: content-box;
-}
-
-.contact-panel-body::-webkit-scrollbar-thumb:hover {
-	background: #9da5b1;
-	background-clip: content-box;
-}
-
-:root.dark .contact-panel-body {
-	scrollbar-color: #4a515d transparent;
-}
-
-:root.dark .contact-panel-body::-webkit-scrollbar-thumb {
-	background: #4a515d;
-	background-clip: content-box;
-}
-
-:root.dark .contact-panel-body::-webkit-scrollbar-thumb:hover {
-	background: #697382;
-	background-clip: content-box;
 }
 
 .contact-panel-section {
@@ -2373,7 +2526,8 @@ h2 {
 	margin-bottom: 5px;
 }
 
-.contact-field input {
+.contact-field input,
+.contact-field select {
 	width: 100%;
 	height: 36px;
 	padding: 0 10px;
@@ -2385,7 +2539,8 @@ h2 {
 	outline: 0;
 }
 
-.contact-field input:focus {
+.contact-field input:focus,
+.contact-field select:focus {
 	border-color: var(--primary);
 	box-shadow: 0 0 0 3px #287de51a;
 }
@@ -2552,48 +2707,12 @@ h2 {
    .chat-window scrollee horizontalmente para llegar a lo que no entra. */
 .chat-window {
 	overflow-x: auto;
-	scrollbar-width: thin;
-	scrollbar-color: #c7ccd4 transparent;
 }
 
 .chat-window-head,
 .message-list,
 .message-composer {
 	min-width: 480px;
-}
-
-.chat-window::-webkit-scrollbar {
-	height: 7px;
-}
-
-.chat-window::-webkit-scrollbar-track {
-	background: transparent;
-}
-
-.chat-window::-webkit-scrollbar-thumb {
-	background: #c7ccd4;
-	border: 2px solid transparent;
-	border-radius: 8px;
-	background-clip: content-box;
-}
-
-.chat-window::-webkit-scrollbar-thumb:hover {
-	background: #9da5b1;
-	background-clip: content-box;
-}
-
-:root.dark .chat-window {
-	scrollbar-color: #4a515d transparent;
-}
-
-:root.dark .chat-window::-webkit-scrollbar-thumb {
-	background: #4a515d;
-	background-clip: content-box;
-}
-
-:root.dark .chat-window::-webkit-scrollbar-thumb:hover {
-	background: #697382;
-	background-clip: content-box;
 }
 
 :root {
@@ -2776,19 +2895,19 @@ h2 {
 }
 
 .status-pill.active {
-	background: color-mix(in srgb, var(--status-color, var(--primary)) 16%, transparent);
-	border-color: var(--status-color, var(--primary));
-	color: var(--status-color, var(--primary));
+	background: color-mix(in srgb, var(--fase-color, var(--primary)) 16%, transparent);
+	border-color: var(--fase-color, var(--primary));
+	color: var(--fase-color, var(--primary));
 	font-weight: 600;
 }
 
-.conv-status-badge {
+.conv-fase-badge {
 	display: inline-block;
 	padding: 4px 9px;
 	border-radius: 999px;
-	background: color-mix(in srgb, var(--status-color) 16%, transparent);
-	color: var(--status-color);
-	border: 1px solid color-mix(in srgb, var(--status-color) 30%, transparent);
+	background: color-mix(in srgb, var(--fase-color) 16%, transparent);
+	color: var(--fase-color);
+	border: 1px solid color-mix(in srgb, var(--fase-color) 30%, transparent);
 	font-size: 11px;
 	font-weight: 600;
 }

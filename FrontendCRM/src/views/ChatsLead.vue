@@ -4,6 +4,7 @@ import { useRoute } from 'vue-router';
 import ChatSidebar from '../components/chat/ChatSidebar.vue';
 import ChatWindow from '../components/chat/ChatWindow.vue';
 import ContactDetailsPanel from '../components/chat/ContactDetailsPanel.vue';
+import type { Fase } from '../constants/fases';
 
 export interface SystemField {
 	id: number;
@@ -11,7 +12,7 @@ export interface SystemField {
 	value: string;
 }
 
-export type EditableContactField = 'firstName' | 'lastName' | 'email' | 'phone' | 'instagram' | 'phase';
+export type EditableContactField = 'firstName' | 'lastName' | 'email' | 'phone' | 'instagram';
 
 export interface Conversation {
 	id: number;
@@ -20,13 +21,14 @@ export interface Conversation {
 	avatar: string;
 	online: boolean;
 	updated: string;
+	updatedAt: Date;
 	preview: string;
 	firstName: string;
 	lastName: string;
 	email: string;
 	phone: string;
 	instagram: string;
-	phase: string;
+	phase: Fase;
 	tags: string[];
 	botPaused: boolean;
 	systemFields: SystemField[];
@@ -39,6 +41,12 @@ export interface ChatMessage {
 	sender: 'me' | 'them';
 }
 
+function daysAgo(n: number): Date {
+	const date = new Date();
+	date.setDate(date.getDate() - n);
+	return date;
+}
+
 const conversations = ref<Conversation[]>([
 	{
 		id: 1,
@@ -47,13 +55,14 @@ const conversations = ref<Conversation[]>([
 		avatar: '300-2.png',
 		online: true,
 		updated: 'Feb 22',
+		updatedAt: daysAgo(0),
 		preview: 'Also, I updated the component library wi...',
 		firstName: 'Sarah',
 		lastName: 'Chen',
 		email: 'sarah.chen@example.com',
 		phone: '+1 415 555 0142',
 		instagram: 'sarahchen.design',
-		phase: 'Suscrito',
+		phase: 'Compromiso',
 		tags: ['Cliente', 'Diseño'],
 		botPaused: false,
 		systemFields: [
@@ -68,13 +77,14 @@ const conversations = ref<Conversation[]>([
 		avatar: '300-3.png',
 		online: true,
 		updated: 'Feb 22',
+		updatedAt: daysAgo(0),
 		preview: "Awesome. I'll start on the virtual scroll ne...",
 		firstName: 'Marcus',
 		lastName: 'Johnson',
 		email: 'marcus.johnson@example.com',
 		phone: '+1 415 555 0198',
 		instagram: 'marcusj.dev',
-		phase: 'Fase 3',
+		phase: 'Llamada',
 		tags: ['Cliente', 'Prioritario'],
 		botPaused: false,
 		systemFields: [
@@ -89,13 +99,14 @@ const conversations = ref<Conversation[]>([
 		avatar: '300-5.png',
 		online: true,
 		updated: 'Feb 21',
+		updatedAt: daysAgo(1),
 		preview: 'Will do!',
 		firstName: 'Alex',
 		lastName: 'Rivera',
 		email: 'alex.rivera@example.com',
 		phone: '+1 415 555 0173',
 		instagram: 'alexrivera.pm',
-		phase: 'Inicial',
+		phase: 'Situación',
 		tags: ['Lead'],
 		botPaused: true,
 		systemFields: [
@@ -110,13 +121,14 @@ const conversations = ref<Conversation[]>([
 		avatar: '300-17.png',
 		online: false,
 		updated: 'Feb 20',
+		updatedAt: daysAgo(2),
 		preview: 'I can handle that. Will open a PR by EOD.',
 		firstName: 'Design',
 		lastName: 'Team',
 		email: 'design.team@example.com',
 		phone: '',
 		instagram: 'peakintel.design',
-		phase: 'Suscrito',
+		phase: 'Visión',
 		tags: ['Interno'],
 		botPaused: false,
 		systemFields: [
@@ -131,13 +143,14 @@ const conversations = ref<Conversation[]>([
 		avatar: '300-7.png',
 		online: false,
 		updated: 'Feb 19',
+		updatedAt: daysAgo(4),
 		preview: 'Will do. Thanks Priya!',
 		firstName: 'Priya',
 		lastName: 'Sharma',
 		email: 'priya.sharma@example.com',
 		phone: '+1 415 555 0116',
 		instagram: 'priya.marketing',
-		phase: 'Pensativo',
+		phase: 'Obstáculo',
 		tags: ['Lead', 'Marketing'],
 		botPaused: false,
 		systemFields: [
@@ -152,13 +165,14 @@ const conversations = ref<Conversation[]>([
 		avatar: '300-8.png',
 		online: false,
 		updated: 'Feb 18',
+		updatedAt: daysAgo(6),
 		preview: "Great. Let's reconvene Thursday for standup.",
 		firstName: 'Sprint',
 		lastName: 'Planning',
 		email: 'sprint.planning@example.com',
 		phone: '',
 		instagram: 'peakintel.eng',
-		phase: 'Suscrito',
+		phase: 'Objeción',
 		tags: ['Interno'],
 		botPaused: false,
 		systemFields: [
@@ -173,13 +187,14 @@ const conversations = ref<Conversation[]>([
 		avatar: '300-8.png',
 		online: false,
 		updated: 'Feb 18',
+		updatedAt: daysAgo(15),
 		preview: "Great. Let's reconvene Thursday for standup.",
 		firstName: 'Sprint',
 		lastName: 'Planning',
 		email: 'sprint.planning@example.com',
 		phone: '',
 		instagram: 'peakintel.eng',
-		phase: 'Suscrito',
+		phase: 'Link',
 		tags: ['Interno'],
 		botPaused: false,
 		systemFields: [
@@ -252,6 +267,11 @@ function updateContactField(field: EditableContactField, value: string) {
 	if (conversation) conversation[field] = value;
 }
 
+function updatePhase(phase: Fase) {
+	const conversation = activeConversation.value;
+	if (conversation) conversation.phase = phase;
+}
+
 function addTag(tag: string) {
 	const conversation = activeConversation.value;
 	if (conversation && !conversation.tags.includes(tag)) conversation.tags.push(tag);
@@ -292,7 +312,7 @@ function removeSystemField(id: number) {
 			</div>
 		</header>
 		<div class="chat-layout" :class="{ 'panel-open': panelColumnActive }">
-			<ChatSidebar :conversations="filteredConversations" :active-id="activeId" v-model:search="search" @select="selectConversation" />
+			<ChatSidebar :conversations="filteredConversations" :all-conversations="conversations" :active-id="activeId" v-model:search="search" @select="selectConversation" />
 			<ChatWindow :conversation="activeConversation" :messages="messageMap[activeId] ?? []" :details-open="detailsOpen" @send="sendMessage" @toggle-details="toggleDetails" />
 			<Transition name="panel-slide" @after-leave="onPanelAfterLeave">
 				<ContactDetailsPanel
@@ -300,6 +320,7 @@ function removeSystemField(id: number) {
 					:conversation="activeConversation"
 					@close="detailsOpen = false"
 					@update-field="updateContactField"
+					@update-phase="updatePhase"
 					@add-tag="addTag"
 					@remove-tag="removeTag"
 					@toggle-bot="toggleBot"

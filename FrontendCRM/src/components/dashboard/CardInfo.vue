@@ -123,10 +123,13 @@ const dashboard = useDashboardStore();
 }
 
 .crm-stat-change {
-	display: flex;
+	display: inline-flex;
 	align-items: center;
-	gap: 5px;
+	gap: 4px;
 	margin-top: 7px;
+	padding: 2px 8px;
+	border-radius: 999px;
+	background: color-mix(in srgb, #19a66a 14%, transparent);
 	color: #19a66a;
 	font-size: 11px;
 	font-weight: 600;
@@ -137,6 +140,7 @@ const dashboard = useDashboardStore();
 }
 
 .crm-stat-change.negative {
+	background: color-mix(in srgb, #ef4444 14%, transparent);
 	color: #ef4444;
 }
 

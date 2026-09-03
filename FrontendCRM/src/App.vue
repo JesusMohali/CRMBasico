@@ -5,6 +5,7 @@ import AppLayout from './components/layout/AppLayout.vue';
 import SearchModal from './components/overlays/SearchModal.vue';
 import NotificationsDrawer from './components/overlays/NotificationsDrawer.vue';
 import ProfileModal from './components/overlays/ProfileModal.vue';
+import ConfirmDialog from './components/overlays/ConfirmDialog.vue';
 const ui = useUiStore();
 const route = useRoute();
 </script>
@@ -19,5 +20,6 @@ const route = useRoute();
 		<SearchModal v-if="ui.searchOpen" />
 		<NotificationsDrawer v-if="ui.notificationsOpen" />
 		<ProfileModal v-if="ui.profileOpen" />
+		<ConfirmDialog />
 	</template>
 </template>

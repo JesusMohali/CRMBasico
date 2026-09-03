@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import type { Conversation, EditableContactField } from '@/views/ChatsLead.vue';
+import { FASES, type Fase } from '../../constants/fases';
 
 defineProps<{ conversation: Conversation }>();
 const emit = defineEmits<{
 	close: [];
 	'update-field': [field: EditableContactField, value: string];
+	'update-phase': [phase: Fase];
 	'toggle-bot': [];
 	'add-tag': [tag: string];
 	'remove-tag': [tag: string];
@@ -32,6 +34,10 @@ function onFieldInput(field: EditableContactField, event: Event) {
 
 function onSystemFieldInput(id: number, key: 'label' | 'value', event: Event) {
 	emit('update-system-field', id, key, (event.target as HTMLInputElement).value);
+}
+
+function onPhaseInput(event: Event) {
+	emit('update-phase', (event.target as HTMLSelectElement).value as Fase);
 }
 </script>
 
@@ -71,7 +77,9 @@ function onSystemFieldInput(id: number, key: 'label' | 'value', event: Event) {
 					</label>
 					<label class="contact-field">
 						<span><i class="ki-filled ki-flag" /> Fase</span>
-						<input :value="conversation.phase" @input="onFieldInput('phase', $event)" />
+						<select :value="conversation.phase" @change="onPhaseInput">
+							<option v-for="fase in FASES" :key="fase" :value="fase">{{ fase }}</option>
+						</select>
 					</label>
 				</div>
 			</section>
