@@ -1,6 +1,9 @@
 export type RolTenant = 'owner' | 'admin' | 'member' | 'viewer';
-export type RolPlataforma = 'superadmin' | 'support' | 'billing';
 export type EstadoUsuario = 'invited' | 'active' | 'disabled';
+
+// No hay tipo de rol de plataforma. auth.platform_admins sigue existiendo en la
+// base, reservada para el backoffice externo, pero esta API no la consulta
+// jamás: aquí no existe nadie con visibilidad por encima de un cliente.
 
 /**
  * Jerarquía de roles de tenant. Un número mayor incluye todo lo que puede hacer
@@ -14,7 +17,6 @@ export const NIVEL_ROL: Record<RolTenant, number> = {
   owner: 4,
 };
 
-export function rolAlcanza(rol: RolTenant | null, minimo: RolTenant): boolean {
-  if (!rol) return false;
+export function rolAlcanza(rol: RolTenant, minimo: RolTenant): boolean {
   return NIVEL_ROL[rol] >= NIVEL_ROL[minimo];
 }

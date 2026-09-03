@@ -1,16 +1,18 @@
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { noAutorizado, prohibido } from '../lib/errors.js';
 import { verificarAccessToken } from './tokens.js';
-import { rolAlcanza, type RolPlataforma, type RolTenant } from './tipos.js';
+import { rolAlcanza, type RolTenant } from './tipos.js';
 
 declare module 'fastify' {
   interface FastifyRequest {
+    // tenantId y rol no son nulables: cada usuario pertenece exactamente a un
+    // cliente, así que toda sesión autenticada tiene cliente y rol. Un token sin
+    // ellos ni siquiera pasa la verificación (ver tokens.ts).
     usuario?: {
       id: string;
       sesionId: string;
-      tenantId: string | null;
-      rol: RolTenant | null;
-      plataforma: RolPlataforma | null;
+      tenantId: string;
+      rol: RolTenant;
     };
   }
 }
@@ -30,7 +32,6 @@ export async function autenticar(peticion: FastifyRequest, _respuesta: FastifyRe
       sesionId: contenido.sid,
       tenantId: contenido.tid,
       rol: contenido.rol,
-      plataforma: contenido.plataforma,
     };
   } catch (error) {
     throw noAutorizado(`access token inválido: ${(error as Error).message}`);
@@ -38,40 +39,19 @@ export async function autenticar(peticion: FastifyRequest, _respuesta: FastifyRe
 }
 
 /**
- * Exige que la sesión tenga un tenant activo. Se usa en todo lo que toca datos
- * de un cliente: sin tenant no hay con qué fijar app.tenant_id, y sin eso RLS
- * no devolvería nada de todos modos.
- */
-export function exigirTenant(peticion: FastifyRequest): string {
-  const tenantId = peticion.usuario?.tenantId;
-  if (!tenantId) {
-    throw prohibido('la sesión no tiene un cliente activo; usá POST /auth/tenant');
-  }
-  return tenantId;
-}
-
-/**
  * Exige un rol mínimo dentro del tenant. Compara por nivel y no contra una lista
  * de roles, para que añadir un rol intermedio no obligue a revisar cada endpoint.
+ *
+ * No hay ninguna comprobación por encima del tenant: no existe rol que permita
+ * saltar de un cliente a otro, así que un endpoint solo puede exigir más rol
+ * DENTRO del cliente de la sesión.
  */
 export function exigirRol(minimo: RolTenant) {
   return async (peticion: FastifyRequest) => {
     if (!peticion.usuario) throw noAutorizado('sin autenticar');
-    exigirTenant(peticion);
 
     if (!rolAlcanza(peticion.usuario.rol, minimo)) {
-      throw prohibido(`requiere rol ${minimo}, tiene ${peticion.usuario.rol ?? 'ninguno'}`);
-    }
-  };
-}
-
-/** Exige ser staff de GPI. */
-export function exigirPlataforma(...roles: RolPlataforma[]) {
-  return async (peticion: FastifyRequest) => {
-    if (!peticion.usuario) throw noAutorizado('sin autenticar');
-    const rol = peticion.usuario.plataforma;
-    if (!rol || (roles.length > 0 && !roles.includes(rol))) {
-      throw prohibido(`requiere rol de plataforma ${roles.join('|') || 'cualquiera'}`);
+      throw prohibido(`requiere rol ${minimo}, tiene ${peticion.usuario.rol}`);
     }
   };
 }
