@@ -3230,3 +3230,68 @@ h2 {
 .phase-menu .date-toggle {
 	white-space: nowrap;
 }
+
+/* ── Estados de las pantallas de autenticación ───────────────────────
+   Avisos, ayudas y pie de las cuatro pantallas sin sidebar (login,
+   recuperación, reset e invitación). Los colores van a pelo y no con
+   var(--danger): el marco de auth se pinta siempre en oscuro (.dark en
+   .auth-shell), así que aquí no hay dos temas que atender. */
+.auth-alert {
+	display: flex;
+	align-items: flex-start;
+	gap: 10px;
+	margin: 0;
+	padding: 11px 13px;
+	border-radius: 7px;
+	border: 1px solid transparent;
+	font-size: 13px;
+	line-height: 1.5;
+}
+
+.auth-alert i {
+	flex: none;
+	margin-top: 1px;
+	font-size: 15px;
+}
+
+.auth-alert-error {
+	color: #fca5a5;
+	border-color: #7f1d1d;
+	background: #7f1d1d33;
+}
+
+.auth-alert-ok {
+	color: #86efac;
+	border-color: #14532d;
+	background: #14532d33;
+}
+
+.auth-ayuda {
+	color: var(--muted-foreground);
+	font-size: 12px;
+	line-height: 1.5;
+}
+
+.auth-pie {
+	margin: 2px 0 0;
+	text-align: center;
+	font-size: 13px;
+}
+
+/* Los botones que en realidad son RouterLink (.kt-btn sobre un <a>) no heredan
+   el centrado del texto de un <button>, y sin esto quedan alineados a la
+   izquierda dentro de .auth-submit. */
+a.auth-submit {
+	text-decoration: none;
+}
+
+/* Mientras se envía el formulario todo queda inerte pero legible: apagar del
+   todo el botón hace pensar que la pantalla se colgó. */
+.auth-form .kt-btn:disabled,
+.auth-form .kt-input:disabled,
+.auth-form input:disabled,
+.logout-button:disabled,
+.icon-btn:disabled {
+	opacity: .6;
+	cursor: not-allowed;
+}
