@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { nextTick, ref } from 'vue';
-import type { ChatMessage, Conversation } from '@/views/ChatsLead.vue';
+import type { ChatMessage, Contact } from '../../stores';
 
-defineProps<{ conversation: Conversation; messages: ChatMessage[]; detailsOpen: boolean }>();
+defineProps<{ conversation: Contact; messages: ChatMessage[]; detailsOpen: boolean }>();
 const avatarUrls = import.meta.glob('../../assets/media/avatars/*', { eager: true, query: '?url', import: 'default' }) as Record<string, string>;
 const emit = defineEmits<{ send: [text: string]; 'toggle-details': [] }>();
 const draft = ref('');

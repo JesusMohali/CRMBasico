@@ -2,6 +2,7 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { useTeamsStore } from '../../stores';
 import { FASES, FASE_COLORS } from '../../constants/fases';
+import SortableTh from '../common/SortableTh.vue';
 const teams = useTeamsStore();
 const allSelected = computed(() => teams.visible.length > 0 && teams.visible.every((team) => teams.selected.includes(team.id)));
 function handleSearch(event: Event) {
@@ -72,10 +73,10 @@ onBeforeUnmount(() => document.removeEventListener('click', closePhaseMenu));
 				<thead>
 					<tr>
 						<!-- <th><input type="checkbox" :checked="allSelected" @change="toggleAll" /></th> -->
-						<th>Nombre completo</th>
-						<th>Usuario</th>
-						<th>Última Actualización</th>
-						<th>Fase</th>
+						<SortableTh label="Nombre completo" :active="teams.sortKey === 'name'" :direction="teams.sortDir" @sort="teams.setSort('name')" />
+						<SortableTh label="Usuario" :active="teams.sortKey === 'user'" :direction="teams.sortDir" @sort="teams.setSort('user')" />
+						<SortableTh label="Última Actualización" :active="teams.sortKey === 'updated'" :direction="teams.sortDir" @sort="teams.setSort('updated')" />
+						<SortableTh label="Fase" :active="teams.sortKey === 'phase'" :direction="teams.sortDir" @sort="teams.setSort('phase')" />
 					</tr>
 				</thead>
 				<tbody>

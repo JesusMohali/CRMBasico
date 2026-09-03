@@ -3,6 +3,7 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 // import { useRouter } from 'vue-router';
 import ApexCharts from 'apexcharts';
 import { useFinanceStore, useDashboardStore, formatMoneda, formatPorcentaje } from '../stores';
+import SortableTh from '../components/common/SortableTh.vue';
 
 // const router = useRouter();
 const finance = useFinanceStore();
@@ -177,14 +178,14 @@ const readingParagraphs = computed(() => {
 					<table class="kt-table">
 						<thead>
 							<tr>
-								<th>Etiqueta</th>
-								<th>Monto</th>
+								<SortableTh label="Etiqueta" :active="finance.expenseSortKey === 'tag'" :direction="finance.expenseSortDir" @sort="finance.setExpenseSort('tag')" />
+								<SortableTh label="Monto" :active="finance.expenseSortKey === 'amount'" :direction="finance.expenseSortDir" @sort="finance.setExpenseSort('amount')" />
 								<th>%</th>
 								<th></th>
 							</tr>
 						</thead>
 						<tbody>
-							<tr v-for="item in finance.expenses" :key="item.id">
+							<tr v-for="item in finance.sortedExpenses" :key="item.id">
 								<td>{{ item.tag }}</td>
 								<td>{{ formatMoneda(item.amount) }}</td>
 								<td>{{ finance.currentMonthGasto ? formatPorcentaje(item.amount / finance.currentMonthGasto) : '—' }}</td>

@@ -2,6 +2,34 @@ import { computed, ref, watch } from 'vue'
 import { defineStore } from 'pinia'
 import { FASES, type Fase } from '../constants/fases'
 
+// ── Ordenamiento de tablas (compartido) ──────────────────────────────
+// Cada store con una tabla ordenable guarda su propio sortKey/sortDir
+// y llama a sortRows() dentro del computed correspondiente — así el
+// orden se aplica ANTES de paginar, no solo a la página visible.
+export type SortDirection = 'asc' | 'desc'
+
+function compareForSort(av: unknown, bv: unknown): number {
+  if (av == null && bv == null) return 0
+  if (av == null) return 1
+  if (bv == null) return -1
+  if (av instanceof Date && bv instanceof Date) return av.getTime() - bv.getTime()
+  if (typeof av === 'number' && typeof bv === 'number') return av - bv
+  if (typeof av === 'string' && typeof bv === 'string') {
+    // Si ambos strings son fechas parseables (ej. "21 Oct, 2024"), comparamos como fecha.
+    const da = Date.parse(av)
+    const db = Date.parse(bv)
+    if (!Number.isNaN(da) && !Number.isNaN(db)) return da - db
+    return av.localeCompare(bv, 'es', { numeric: true, sensitivity: 'base' })
+  }
+  return String(av).localeCompare(String(bv), 'es', { numeric: true, sensitivity: 'base' })
+}
+
+export function sortRows<T extends object>(rows: T[], key: keyof T | null, dir: SortDirection): T[] {
+  if (!key) return rows
+  const factor = dir === 'asc' ? 1 : -1
+  return [...rows].sort((a, b) => compareForSort(a[key], b[key]) * factor)
+}
+
 export const useUiStore = defineStore('ui', () => {
   const sidebarOpen = ref(false)
   const sidebarCollapsed = ref(localStorage.getItem('kt-sidebar-collapse') === 'true')
@@ -29,6 +57,8 @@ export const useTeamsStore = defineStore('teams', () => {
   const page = ref(1)
   const selected = ref<number[]>([])
   const phaseFilter = ref<Fase | 'Todas'>('Todas')
+  const sortKey = ref<keyof Lead | null>(null)
+  const sortDir = ref<SortDirection>('asc')
   const teams = ref<Lead[]>([
     { id: 1, name: 'Jesús Mohali', email: 'jesus.mohali@example.com', user: 'jesus.mohali', updated: '21 Oct, 2024', phase: 'Llamada', },
     { id: 2, name: 'Diana Lozano', email: 'diana.lozano@example.com', user: 'diana.lozano', updated: '15 Oct, 2024', phase: 'Situación', },
@@ -44,7 +74,7 @@ export const useTeamsStore = defineStore('teams', () => {
   const filtered = computed(() => {
     const search = query.value.trim().toLowerCase()
 
-    return teams.value.filter(team => {
+    const rows = teams.value.filter(team => {
       if (phaseFilter.value !== 'Todas' && team.phase !== phaseFilter.value) return false
       if (!search) return true
 
@@ -58,14 +88,21 @@ export const useTeamsStore = defineStore('teams', () => {
 
       return haystack.includes(search)
     })
+
+    return sortRows(rows, sortKey.value, sortDir.value)
   })
   const pages = computed(() => Math.max(1, Math.ceil(filtered.value.length / 5)))
   const visible = computed(() => filtered.value.slice((page.value - 1) * 5, page.value * 5))
   const byFase = computed(() => FASES.map(fase => ({ fase, total: teams.value.filter(team => team.phase === fase).length })))
   function search(value: string) { query.value = value; page.value = 1 }
   function setPhaseFilter(value: Fase | 'Todas') { phaseFilter.value = value; page.value = 1 }
+  function setSort(key: keyof Lead) {
+    if (sortKey.value !== key) { sortKey.value = key; sortDir.value = 'asc'; return }
+    if (sortDir.value === 'asc') { sortDir.value = 'desc'; return }
+    sortKey.value = null
+  }
   function toggle(id: number) { selected.value = selected.value.includes(id) ? selected.value.filter(item => item !== id) : [...selected.value, id] }
-  return { query, page, selected, phaseFilter, teams, filtered, pages, visible, byFase, search, setPhaseFilter, toggle }
+  return { query, page, selected, phaseFilter, sortKey, sortDir, teams, filtered, pages, visible, byFase, search, setPhaseFilter, setSort, toggle }
 })
 
 interface ConversationRecord {
@@ -83,6 +120,8 @@ interface ConversationRecord {
 export const useConversationsStore = defineStore('conversationsStatus', () => {
   const query = ref('')
   const phaseFilter = ref<Fase | 'Todas'>('Todas')
+  const sortKey = ref<keyof ConversationRecord | null>(null)
+  const sortDir = ref<SortDirection>('asc')
 
   const conversations = ref<ConversationRecord[]>([
     { id: 1, name: 'Sarah Chen', email: 'sarah.chen@example.com', channel: 'Instagram', phase: 'Compromiso', antiguedad: '2 días', updated: '21 Oct, 2024', chatId: 1 },
@@ -97,7 +136,7 @@ export const useConversationsStore = defineStore('conversationsStatus', () => {
 
   const filtered = computed(() => {
     const q = query.value.trim().toLowerCase()
-    return conversations.value.filter((item) => {
+    const rows = conversations.value.filter((item) => {
       if (phaseFilter.value !== 'Todas' && item.phase !== phaseFilter.value) return false
       if (!q) return true
       const haystack = [item.name, item.email, item.channel, item.phase, item.antiguedad, item.updated, item.discardReason ?? '']
@@ -105,6 +144,7 @@ export const useConversationsStore = defineStore('conversationsStatus', () => {
         .toLowerCase()
       return haystack.includes(q)
     })
+    return sortRows(rows, sortKey.value, sortDir.value)
   })
 
   const countsByFase = computed(() => FASES.map((fase) => ({
@@ -114,8 +154,13 @@ export const useConversationsStore = defineStore('conversationsStatus', () => {
 
   function search(value: string) { query.value = value }
   function setPhaseFilter(value: Fase | 'Todas') { phaseFilter.value = value }
+  function setSort(key: keyof ConversationRecord) {
+    if (sortKey.value !== key) { sortKey.value = key; sortDir.value = 'asc'; return }
+    if (sortDir.value === 'asc') { sortDir.value = 'desc'; return }
+    sortKey.value = null
+  }
 
-  return { query, phaseFilter, conversations, filtered, countsByFase, search, setPhaseFilter }
+  return { query, phaseFilter, sortKey, sortDir, conversations, filtered, countsByFase, search, setPhaseFilter, setSort }
 })
 
 export type AttendanceStatus = 'Show' | 'No-show' | 'Pendiente'
@@ -427,6 +472,15 @@ export const useFinanceStore = defineStore('finance', () => {
     { id: 5, tag: 'Otros', amount: 1300 },
   ])
 
+  const expenseSortKey = ref<keyof ExpenseEntry | null>(null)
+  const expenseSortDir = ref<SortDirection>('asc')
+  const sortedExpenses = computed(() => sortRows(expenses.value, expenseSortKey.value, expenseSortDir.value))
+  function setExpenseSort(key: keyof ExpenseEntry) {
+    if (expenseSortKey.value !== key) { expenseSortKey.value = key; expenseSortDir.value = 'asc'; return }
+    if (expenseSortDir.value === 'asc') { expenseSortDir.value = 'desc'; return }
+    expenseSortKey.value = null
+  }
+
   const currentMonthGasto = computed(() => expenses.value.reduce((sum, item) => sum + item.amount, 0))
   const currentMonthBeneficio = computed(() => currentMonthFacturacion.value - currentMonthGasto.value)
 
@@ -480,6 +534,10 @@ export const useFinanceStore = defineStore('finance', () => {
     currentMonthLabel,
     currentMonthFacturacion,
     expenses,
+    expenseSortKey,
+    expenseSortDir,
+    sortedExpenses,
+    setExpenseSort,
     currentMonthGasto,
     currentMonthBeneficio,
     allMonths,
@@ -587,4 +645,282 @@ export const useConfirmStore = defineStore('confirm', () => {
   }
 
   return { open, title, message, confirmText, cancelText, danger, ask, resolve }
+})
+// ── Contactos (compartido entre /chats y /contactos) ─────────────────
+// Antes esto vivía como un ref local dentro de ChatsLead.vue; ahora es
+// un store para que "detener bot" (o cualquier edición) hecha desde la
+// tabla de Contactos se refleje en el chat real de esa persona, y
+// viceversa — son el mismo registro, no dos copias.
+export interface SystemField {
+  id: number
+  label: string
+  value: string
+}
+
+export type EditableContactField = 'firstName' | 'lastName' | 'email' | 'phone' | 'instagram'
+
+export interface Contact {
+  id: number
+  name: string
+  role: string
+  avatar: string
+  online: boolean
+  updated: string
+  updatedAt: Date
+  createdAt: Date
+  preview: string
+  firstName: string
+  lastName: string
+  email: string
+  phone: string
+  instagram: string
+  phase: Fase
+  tags: string[]
+  botPaused: boolean
+  systemFields: SystemField[]
+}
+
+export interface ChatMessage {
+  id: number
+  text: string
+  time: string
+  sender: 'me' | 'them'
+}
+
+function daysAgo(n: number): Date {
+  const date = new Date()
+  date.setDate(date.getDate() - n)
+  return date
+}
+
+export const useContactsStore = defineStore('contacts', () => {
+  const sortKey = ref<keyof Contact | null>(null)
+  const sortDir = ref<SortDirection>('asc')
+
+  const contacts = ref<Contact[]>([
+    {
+      id: 1,
+      name: 'Sarah Chen',
+      role: 'Product Designer',
+      avatar: '300-2.png',
+      online: true,
+      updated: 'Feb 22',
+      updatedAt: daysAgo(0),
+      createdAt: daysAgo(46),
+      preview: 'Also, I updated the component library wi...',
+      firstName: 'Sarah',
+      lastName: 'Chen',
+      email: 'sarah.chen@example.com',
+      phone: '+1 415 555 0142',
+      instagram: 'sarahchen.design',
+      phase: 'Compromiso',
+      tags: ['Cliente', 'Diseño'],
+      botPaused: false,
+      systemFields: [
+        { id: 1, label: 'Nombre', value: 'Sarah' },
+        { id: 2, label: 'Apellido', value: 'Chen' },
+      ],
+    },
+    {
+      id: 2,
+      name: 'Marcus Johnson',
+      role: 'Engineering Lead',
+      avatar: '300-3.png',
+      online: true,
+      updated: 'Feb 22',
+      updatedAt: daysAgo(0),
+      createdAt: daysAgo(30),
+      preview: "Awesome. I'll start on the virtual scroll ne...",
+      firstName: 'Marcus',
+      lastName: 'Johnson',
+      email: 'marcus.johnson@example.com',
+      phone: '+1 415 555 0198',
+      instagram: 'marcusj.dev',
+      phase: 'Llamada',
+      tags: ['Cliente', 'Prioritario'],
+      botPaused: false,
+      systemFields: [
+        { id: 1, label: 'Nombre', value: 'Marcus' },
+        { id: 2, label: 'Apellido', value: 'Johnson' },
+      ],
+    },
+    {
+      id: 3,
+      name: 'Alex Rivera',
+      role: 'Project Manager',
+      avatar: '300-5.png',
+      online: true,
+      updated: 'Feb 21',
+      updatedAt: daysAgo(1),
+      createdAt: daysAgo(9),
+      preview: 'Will do!',
+      firstName: 'Alex',
+      lastName: 'Rivera',
+      email: 'alex.rivera@example.com',
+      phone: '+1 415 555 0173',
+      instagram: 'alexrivera.pm',
+      phase: 'Situación',
+      tags: ['Lead'],
+      botPaused: true,
+      systemFields: [
+        { id: 1, label: 'Nombre', value: 'Alex' },
+        { id: 2, label: 'Apellido', value: 'Rivera' },
+      ],
+    },
+    {
+      id: 4,
+      name: 'Design Team',
+      role: '8 members',
+      avatar: '300-17.png',
+      online: false,
+      updated: 'Feb 20',
+      updatedAt: daysAgo(2),
+      createdAt: daysAgo(120),
+      preview: 'I can handle that. Will open a PR by EOD.',
+      firstName: 'Design',
+      lastName: 'Team',
+      email: 'design.team@example.com',
+      phone: '',
+      instagram: 'peakintel.design',
+      phase: 'Visión',
+      tags: ['Interno'],
+      botPaused: false,
+      systemFields: [
+        { id: 1, label: 'Nombre', value: 'Design' },
+        { id: 2, label: 'Apellido', value: 'Team' },
+      ],
+    },
+    {
+      id: 5,
+      name: 'Priya Sharma',
+      role: 'Marketing',
+      avatar: '300-7.png',
+      online: false,
+      updated: 'Feb 19',
+      updatedAt: daysAgo(4),
+      createdAt: daysAgo(18),
+      preview: 'Will do. Thanks Priya!',
+      firstName: 'Priya',
+      lastName: 'Sharma',
+      email: 'priya.sharma@example.com',
+      phone: '+1 415 555 0116',
+      instagram: 'priya.marketing',
+      phase: 'Obstáculo',
+      tags: ['Lead', 'Marketing'],
+      botPaused: false,
+      systemFields: [
+        { id: 1, label: 'Nombre', value: 'Priya' },
+        { id: 2, label: 'Apellido', value: 'Sharma' },
+      ],
+    },
+    {
+      id: 6,
+      name: 'Sprint Planning',
+      role: '5 members',
+      avatar: '300-8.png',
+      online: false,
+      updated: 'Feb 18',
+      updatedAt: daysAgo(6),
+      createdAt: daysAgo(200),
+      preview: "Great. Let's reconvene Thursday for standup.",
+      firstName: 'Sprint',
+      lastName: 'Planning',
+      email: 'sprint.planning@example.com',
+      phone: '',
+      instagram: 'peakintel.eng',
+      phase: 'Objeción',
+      tags: ['Interno'],
+      botPaused: false,
+      systemFields: [
+        { id: 1, label: 'Nombre', value: 'Sprint' },
+        { id: 2, label: 'Apellido', value: 'Planning' },
+      ],
+    },
+    {
+      id: 7,
+      name: 'Sprint Planning',
+      role: '5 members',
+      avatar: '300-8.png',
+      online: false,
+      updated: 'Feb 18',
+      updatedAt: daysAgo(15),
+      createdAt: daysAgo(200),
+      preview: "Great. Let's reconvene Thursday for standup.",
+      firstName: 'Sprint',
+      lastName: 'Planning',
+      email: 'sprint.planning@example.com',
+      phone: '',
+      instagram: 'peakintel.eng',
+      phase: 'Link',
+      tags: ['Interno'],
+      botPaused: false,
+      systemFields: [
+        { id: 1, label: 'Nombre', value: 'Sprint' },
+        { id: 2, label: 'Apellido', value: 'Planning' },
+      ],
+    },
+  ])
+
+  const sorted = computed(() => sortRows(contacts.value, sortKey.value, sortDir.value))
+  function setSort(key: keyof Contact) {
+    if (sortKey.value !== key) { sortKey.value = key; sortDir.value = 'asc'; return }
+    if (sortDir.value === 'asc') { sortDir.value = 'desc'; return }
+    sortKey.value = null
+  }
+
+  function updateContactField(id: number, field: EditableContactField, value: string) {
+    const contact = contacts.value.find((item) => item.id === id)
+    if (contact) contact[field] = value
+  }
+
+  function updatePhase(id: number, phase: Fase) {
+    const contact = contacts.value.find((item) => item.id === id)
+    if (contact) contact.phase = phase
+  }
+
+  function addTag(id: number, tag: string) {
+    const contact = contacts.value.find((item) => item.id === id)
+    if (contact && !contact.tags.includes(tag)) contact.tags.push(tag)
+  }
+
+  function removeTag(id: number, tag: string) {
+    const contact = contacts.value.find((item) => item.id === id)
+    if (contact) contact.tags = contact.tags.filter((item) => item !== tag)
+  }
+
+  function toggleBot(id: number) {
+    const contact = contacts.value.find((item) => item.id === id)
+    if (contact) contact.botPaused = !contact.botPaused
+  }
+
+  function addSystemField(id: number) {
+    const contact = contacts.value.find((item) => item.id === id)
+    if (contact) contact.systemFields.push({ id: Date.now(), label: '', value: '' })
+  }
+
+  function updateSystemField(contactId: number, fieldId: number, key: 'label' | 'value', value: string) {
+    const field = contacts.value.find((item) => item.id === contactId)?.systemFields.find((item) => item.id === fieldId)
+    if (field) field[key] = value
+  }
+
+  function removeSystemField(contactId: number, fieldId: number) {
+    const contact = contacts.value.find((item) => item.id === contactId)
+    if (contact) contact.systemFields = contact.systemFields.filter((item) => item.id !== fieldId)
+  }
+
+  return {
+    contacts,
+    sorted,
+    sortKey,
+    sortDir,
+    setSort,
+    updateContactField,
+    updatePhase,
+    addTag,
+    removeTag,
+    toggleBot,
+    addSystemField,
+    updateSystemField,
+    removeSystemField,
+  }
 })

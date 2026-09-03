@@ -19,6 +19,7 @@ type NavSection = {
 const sections: NavSection[] = [
 	{ label: 'Overview', icon: 'ki-home-3', path: '/overview' },
 	{ label: 'Chat', icon: 'ki-message-text', path: '/chats' },
+	{ label: 'Contactos', icon: 'ki-address-book', path: '/contactos' },
 	/* {
 		label: 'Public Profile',
 		icon: 'ki-profile-circle',

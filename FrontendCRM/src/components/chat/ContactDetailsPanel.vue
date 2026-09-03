@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { ref } from 'vue';
-import type { Conversation, EditableContactField } from '@/views/ChatsLead.vue';
+import type { Contact, EditableContactField } from '../../stores';
 import { FASES, type Fase } from '../../constants/fases';
 
-defineProps<{ conversation: Conversation }>();
+defineProps<{ conversation: Contact }>();
 const emit = defineEmits<{
 	close: [];
 	'update-field': [field: EditableContactField, value: string];
