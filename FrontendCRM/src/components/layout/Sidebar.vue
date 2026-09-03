@@ -2,8 +2,10 @@
 import { onBeforeUnmount, onMounted, ref } from 'vue';
 import { RouterLink, useRoute, useRouter } from 'vue-router';
 import { useUiStore } from '../../stores';
+import { useSesionStore } from '../../stores/sesion';
 import logo from '@/assets/media/app/peak-logo.png';
 const ui = useUiStore();
+const sesion = useSesionStore();
 const route = useRoute();
 const router = useRouter();
 const expanded = ref('');
@@ -58,10 +60,20 @@ function handleThemeChange(event: Event) {
 	ui.setTheme((event.target as HTMLInputElement).checked);
 }
 
-function handleLogout() {
-	// Aquí iría la lógica de cierre de sesión, como limpiar tokens, etc.
-	// Por ahora solo redirige a la página de inicio de sesión.
-	router.push('/sign-in');
+const cerrandoSesion = ref(false);
+
+async function handleLogout() {
+	if (cerrandoSesion.value) return;
+	cerrandoSesion.value = true;
+
+	// `sesion.logout()` avisa al backend para revocar la sesión de verdad, pero
+	// nunca lanza: si el servidor no contesta, limpia igual y seguimos. Que se
+	// haya caído la red no puede ser motivo para dejar a alguien encerrado
+	// dentro de la aplicación.
+	await sesion.logout();
+	userMenuOpen.value = false;
+	cerrandoSesion.value = false;
+	router.replace('/sign-in');
 }
 onMounted(() => document.addEventListener('click', closeUserMenu));
 onBeforeUnmount(() => document.removeEventListener('click', closeUserMenu));
@@ -112,9 +124,9 @@ onBeforeUnmount(() => document.removeEventListener('click', closeUserMenu));
 			<Transition name="menu-pop">
 				<div v-if="userMenuOpen" class="user-menu kt-menu" @click.stop>
 					<div class="user-menu-profile">
-						<span class="avatar avatar-green">JD</span>
-						<div><b>John Doe</b><small>john.doe@company.com</small></div>
-						<span class="plan-badge">Pro</span>
+						<span class="avatar avatar-green">{{ sesion.iniciales }}</span>
+						<div><b>{{ sesion.usuario?.nombre ?? 'Sin sesión' }}</b><small>{{ sesion.usuario?.email ?? '' }}</small></div>
+						<span v-if="sesion.tenant" class="plan-badge">{{ sesion.tenant.nombre }}</span>
 					</div>
 					<div class="user-menu-divider" />
 					<button
@@ -141,16 +153,16 @@ onBeforeUnmount(() => document.removeEventListener('click', closeUserMenu));
 						><i class="ki-filled ki-moon" /> <b>Dark Mode</b
 						><input class="theme-switch" type="checkbox" :checked="ui.dark" @change="handleThemeChange"
 					/></label>
-					<button class="logout-button" @click="handleLogout">Cerrar sesión</button>
+					<button class="logout-button" :disabled="cerrandoSesion" @click="handleLogout">{{ cerrandoSesion ? 'Cerrando…' : 'Cerrar sesión' }}</button>
 				</div>
 			</Transition>
 			<div class="sidebar-foot">
 				<button class="user-trigger" type="button" :aria-expanded="userMenuOpen" @click.stop="userMenuOpen = !userMenuOpen">
-					<span class="avatar avatar-green">JD</span><span class="user-summary"><b>John Doe</b><small>Administrator</small></span>
+					<span class="avatar avatar-green">{{ sesion.iniciales }}</span><span class="user-summary"><b>{{ sesion.usuario?.nombre ?? 'Sin sesión' }}</b><small>{{ sesion.etiquetaRol }}</small></span>
 				</button>
 				<div class="footer-actions">
 					<!-- <button class="icon-btn" title="Notifications" @click="ui.notificationsOpen = true"><i class="ki-filled ki-notification-status" /></button
-					> --><button class="icon-btn" title="Cerrar sesión" @click="handleLogout"><i class="ki-filled ki-exit-right" /></button>
+					> --><button class="icon-btn" title="Cerrar sesión" :disabled="cerrandoSesion" @click="handleLogout"><i class="ki-filled ki-exit-right" /></button>
 				</div>
 			</div>
 		</div>
