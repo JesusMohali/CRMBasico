@@ -11,7 +11,7 @@ import {
 } from '../lib/errors.js';
 import { gastarTiempoDeVerificacion, hashearPassword, verificarPassword } from './passwords.js';
 import { firmarAccessToken, generarRefreshToken, hashearToken } from './tokens.js';
-import type { EstadoUsuario, RolPlataforma, RolTenant } from './tipos.js';
+import type { EstadoUsuario, RolTenant } from './tipos.js';
 
 interface FilaUsuario {
   id: string;
@@ -23,6 +23,7 @@ interface FilaUsuario {
   failed_login_attempts: number;
 }
 
+/** El cliente al que pertenece el usuario, con su rol. Es uno y solo uno. */
 export interface Membresia {
   tenantId: string;
   slug: string;
@@ -34,8 +35,10 @@ export interface ParDeTokens {
   accessToken: string;
   refreshToken: string;
   expiraEn: number;
-  tenant: Membresia | null;
-  usuario: { id: string; email: string; nombre: string; plataforma: RolPlataforma | null };
+  // No es nulable: sin cliente no hay sesión que emitir. Quien no tenga una
+  // membresía activa no entra, así que aquí siempre hay un tenant.
+  tenant: Membresia;
+  usuario: { id: string; email: string; nombre: string };
 }
 
 interface Contexto {
@@ -54,26 +57,28 @@ async function buscarUsuarioPorEmail(cliente: Ejecutor, email: string) {
   return rows[0] ?? null;
 }
 
-async function membresiasDe(cliente: Ejecutor, usuarioId: string): Promise<Membresia[]> {
-  const { rows } = await cliente.query(
+/**
+ * La membresía del usuario, o null si no tiene ninguna utilizable.
+ *
+ * Devuelve una sola fila porque un usuario pertenece como mucho a un cliente: lo
+ * garantiza el índice único sobre tenant_memberships (user_id) que aplica infra.
+ * El LIMIT 1 no elige entre varias, solo hace explícito que aquí se espera una.
+ *
+ * Filtra por estado de la membresía Y por estado del tenant: una membresía
+ * activa en un cliente suspendido no da acceso a nada.
+ */
+async function membresiaDe(cliente: Ejecutor, usuarioId: string): Promise<Membresia | null> {
+  const { rows } = await cliente.query<Membresia>(
     `SELECT t.id AS "tenantId", t.slug, t.name AS nombre, m.role AS rol
        FROM auth.tenant_memberships m
        JOIN auth.tenants t ON t.id = m.tenant_id
       WHERE m.user_id = $1
         AND m.status = 'active'
         AND t.status IN ('trial', 'active')
-      ORDER BY t.name`,
+      LIMIT 1`,
     [usuarioId],
   );
-  return rows as Membresia[];
-}
-
-async function rolDePlataforma(cliente: Ejecutor, usuarioId: string): Promise<RolPlataforma | null> {
-  const { rows } = await cliente.query<{ role: RolPlataforma }>(
-    'SELECT role FROM auth.platform_admins WHERE user_id = $1',
-    [usuarioId],
-  );
-  return rows[0]?.role ?? null;
+  return rows[0] ?? null;
 }
 
 async function registrar(
@@ -107,8 +112,7 @@ async function registrar(
 async function emitirSesion(
   cliente: Ejecutor,
   usuario: { id: string; email: string; full_name: string },
-  tenant: Membresia | null,
-  plataforma: RolPlataforma | null,
+  tenant: Membresia,
   contexto: Contexto,
 ): Promise<ParDeTokens> {
   const refreshToken = generarRefreshToken();
@@ -119,7 +123,7 @@ async function emitirSesion(
      VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
     [
       usuario.id,
-      tenant?.tenantId ?? null,
+      tenant.tenantId,
       hashearToken(refreshToken),
       expiraEn,
       contexto.ip ?? null,
@@ -132,9 +136,8 @@ async function emitirSesion(
   const accessToken = await firmarAccessToken({
     sub: usuario.id,
     sid: sesionId,
-    tid: tenant?.tenantId ?? null,
-    rol: tenant?.rol ?? null,
-    plataforma,
+    tid: tenant.tenantId,
+    rol: tenant.rol,
   });
 
   return {
@@ -146,7 +149,6 @@ async function emitirSesion(
       id: usuario.id,
       email: usuario.email,
       nombre: usuario.full_name,
-      plataforma,
     },
   };
 }
@@ -156,9 +158,8 @@ async function emitirSesion(
 export async function login(
   email: string,
   password: string,
-  tenantSlug: string | undefined,
   contexto: Contexto,
-): Promise<ParDeTokens & { membresias: Membresia[] }> {
+): Promise<ParDeTokens> {
   const usuario = await enTransaccion((cliente) => buscarUsuarioPorEmail(cliente, email));
 
   // El email no existe: se gasta el mismo tiempo que costaría verificar un hash
@@ -211,25 +212,14 @@ export async function login(
   }
 
   return enTransaccion(async (cliente) => {
-    const membresias = await membresiasDe(cliente, usuario.id);
-    const plataforma = await rolDePlataforma(cliente, usuario.id);
-
-    // Sin membresías y sin rol de plataforma no hay a dónde entrar.
-    if (membresias.length === 0 && !plataforma) {
-      throw prohibido(`usuario sin membresías ni rol de plataforma (${email})`);
+    // No hay nada que elegir ni que pedir: el cliente del usuario es el único que
+    // tiene. Sin membresía activa no hay a dónde entrar — la cuenta existe y la
+    // contraseña es correcta, pero no pertenece a ningún cliente, así que la
+    // sesión no representaría nada. El alta de usuarios la hace el backoffice.
+    const tenant = await membresiaDe(cliente, usuario.id);
+    if (!tenant) {
+      throw prohibido(`usuario sin membresía activa (${email})`);
     }
-
-    let tenant: Membresia | null = null;
-
-    if (tenantSlug) {
-      tenant = membresias.find((m) => m.slug.toLowerCase() === tenantSlug.toLowerCase()) ?? null;
-      if (!tenant) throw prohibido(`no pertenece al tenant ${tenantSlug}`);
-    } else if (membresias.length === 1) {
-      // Con un solo cliente no hay nada que elegir.
-      tenant = membresias[0]!;
-    }
-    // Con varios y sin slug la sesión queda sin tenant; el cliente elige después
-    // con POST /auth/tenant.
 
     await cliente.query(
       `UPDATE auth.users SET failed_login_attempts = 0, locked_until = NULL, last_login_at = now()
@@ -237,17 +227,16 @@ export async function login(
       [usuario.id],
     );
 
-    const tokens = await emitirSesion(cliente, usuario, tenant, plataforma, contexto);
+    const tokens = await emitirSesion(cliente, usuario, tenant, contexto);
 
     await registrar(cliente, {
       actorId: usuario.id,
-      tenantId: tenant?.tenantId ?? null,
+      tenantId: tenant.tenantId,
       accion: 'auth.login',
-      metadata: { tenants: membresias.length, plataforma },
       ip: contexto.ip,
     });
 
-    return { ...tokens, membresias };
+    return tokens;
   });
 }
 
@@ -321,24 +310,24 @@ export async function refrescar(refreshToken: string, contexto: Contexto): Promi
       throw noAutorizado('usuario inactivo');
     }
 
-    const membresias = await membresiasDe(cliente, usuario.id);
-    const plataforma = await rolDePlataforma(cliente, usuario.id);
-
     // El rol se relee de la base en cada refresh, no se arrastra del token: si a
     // alguien lo bajaron de admin a viewer, el cambio surte efecto en el próximo
     // refresh y no cuando caduque una sesión de 30 días.
-    const tenant = sesion.tenant_id
-      ? membresias.find((m) => m.tenantId === sesion.tenant_id) ?? null
-      : null;
+    const tenant = await membresiaDe(cliente, usuario.id);
+    if (!tenant) throw prohibido('la membresía ya no está activa');
 
-    if (sesion.tenant_id && !tenant) {
-      throw prohibido('la membresía con ese tenant ya no está activa');
+    // Y se comprueba que siga siendo el MISMO cliente con el que se abrió la
+    // sesión. Si a alguien lo quitaron de un cliente y lo dieron de alta en otro,
+    // su refresh token viejo no puede convertirse solo en una sesión del cliente
+    // nuevo: eso entra por un login.
+    if (sesion.tenant_id !== tenant.tenantId) {
+      throw prohibido('la sesión es de otro cliente');
     }
 
     // Rotación: la sesión vieja se revoca y se emite una nueva.
     await cliente.query('UPDATE auth.sessions SET revoked_at = now() WHERE id = $1', [sesion.id]);
 
-    return emitirSesion(cliente, usuario, tenant, plataforma, contexto);
+    return emitirSesion(cliente, usuario, tenant, contexto);
   });
 }
 
@@ -365,45 +354,6 @@ export async function cerrarSesion(sesionId: string, todas: boolean, usuarioId: 
   });
 }
 
-// ── cambio de tenant activo ──────────────────────────────────────────────────
-
-export async function cambiarTenant(
-  usuarioId: string,
-  sesionId: string,
-  tenantSlug: string,
-  contexto: Contexto,
-): Promise<ParDeTokens> {
-  return enTransaccion(async (cliente) => {
-    const membresias = await membresiasDe(cliente, usuarioId);
-    const tenant = membresias.find((m) => m.slug.toLowerCase() === tenantSlug.toLowerCase());
-    if (!tenant) throw prohibido(`no pertenece al tenant ${tenantSlug}`);
-
-    const { rows } = await cliente.query<FilaUsuario>(
-      'SELECT id, email, password_hash, full_name, status, locked_until, failed_login_attempts FROM auth.users WHERE id = $1',
-      [usuarioId],
-    );
-    const usuario = rows[0];
-    if (!usuario || usuario.status !== 'active') throw noAutorizado('usuario inactivo');
-
-    const plataforma = await rolDePlataforma(cliente, usuarioId);
-
-    // La sesión anterior se revoca: un access token con el tenant viejo deja de
-    // poder refrescarse.
-    await cliente.query('UPDATE auth.sessions SET revoked_at = now() WHERE id = $1', [sesionId]);
-
-    const tokens = await emitirSesion(cliente, usuario, tenant, plataforma, contexto);
-
-    await registrar(cliente, {
-      actorId: usuarioId,
-      tenantId: tenant.tenantId,
-      accion: 'auth.tenant.cambiado',
-      ip: contexto.ip,
-    });
-
-    return tokens;
-  });
-}
-
 // ── perfil ───────────────────────────────────────────────────────────────────
 
 export async function perfil(usuarioId: string) {
@@ -417,11 +367,11 @@ export async function perfil(usuarioId: string) {
     const usuario = rows[0];
     if (!usuario) throw noEncontrado('usuario');
 
-    return {
-      ...usuario,
-      membresias: await membresiasDe(cliente, usuarioId),
-      plataforma: await rolDePlataforma(cliente, usuarioId),
-    };
+    // Un tenant, no una lista. Sale null solo en el hueco entre que a alguien le
+    // quitan la membresía y le caduca el access token que ya tenía en la mano:
+    // /auth/me es de lectura y no da acceso a datos del cliente, así que no hace
+    // falta cortar la petición, basta con decir la verdad.
+    return { ...usuario, tenant: await membresiaDe(cliente, usuarioId) };
   });
 }
 
@@ -552,13 +502,21 @@ export async function invitar(
       throw peticionInvalida('El rol owner se transfiere, no se invita');
     }
 
+    // Se mira si el email pertenece a ALGÚN cliente, no solo a este: como cada
+    // usuario pertenece a uno como mucho, una invitación a alguien que ya está en
+    // otro cliente nunca podría aceptarse (chocaría contra el índice único), y
+    // vale más rechazarla aquí que dejar que reviente al aceptarla.
+    //
+    // El mensaje es el mismo en los dos casos a propósito. Si dijera "ya está en
+    // otro cliente", este endpoint le serviría a cualquier admin para averiguar
+    // qué emails pertenecen a clientes ajenos, probando uno a uno.
     const { rows: yaEsta } = await cliente.query(
       `SELECT 1 FROM auth.tenant_memberships m
          JOIN auth.users u ON u.id = m.user_id
-        WHERE m.tenant_id = $1 AND u.email = $2`,
-      [tenantId, email],
+        WHERE u.email = $1`,
+      [email],
     );
-    if (yaEsta.length > 0) throw conflicto('Esa persona ya pertenece a este cliente');
+    if (yaEsta.length > 0) throw conflicto('Ese email ya pertenece a un cliente');
 
     const token = randomBytes(32).toString('base64url');
 
@@ -619,13 +577,25 @@ export async function aceptarInvitacion(
     const invitacion = rows[0];
     if (!invitacion) throw peticionInvalida('La invitación es inválida o ya caducó');
 
-    // Si la persona ya tenía cuenta (invitada desde otro cliente), se reutiliza:
-    // una identidad por persona, no una por cliente.
+    // Si la persona ya tenía cuenta, se reutiliza: una identidad por persona. Lo
+    // que ya no puede pasar es que esa cuenta esté en otro cliente — el índice
+    // único lo impediría con un error de base — así que se comprueba antes y se
+    // responde algo que se entienda. Aquí sí se puede ser explícito: quien acepta
+    // es el dueño de la cuenta, no un tercero fisgoneando.
     const existente = await buscarUsuarioPorEmail(cliente, invitacion.email);
 
     let usuarioId: string;
     if (existente) {
       usuarioId = existente.id;
+
+      const { rows: enOtro } = await cliente.query(
+        'SELECT 1 FROM auth.tenant_memberships WHERE user_id = $1 AND tenant_id <> $2',
+        [usuarioId, invitacion.tenant_id],
+      );
+      if (enOtro.length > 0) {
+        throw conflicto('Esa cuenta ya pertenece a otro cliente');
+      }
+
       if (!existente.password_hash) {
         await cliente.query(
           `UPDATE auth.users SET password_hash = $2, full_name = $3, status = 'active',
@@ -655,9 +625,10 @@ export async function aceptarInvitacion(
       [invitacion.id, usuarioId],
     );
 
-    const membresias = await membresiasDe(cliente, usuarioId);
-    const tenant = membresias.find((m) => m.tenantId === invitacion.tenant_id) ?? null;
-    const plataforma = await rolDePlataforma(cliente, usuarioId);
+    // Se relee en vez de construirla a mano: hace falta el nombre y el estado del
+    // tenant, y así la respuesta del alta es idéntica a la de un login.
+    const tenant = await membresiaDe(cliente, usuarioId);
+    if (!tenant) throw prohibido('el cliente de la invitación no está activo');
 
     const { rows: filasUsuario } = await cliente.query<FilaUsuario>(
       'SELECT id, email, password_hash, full_name, status, locked_until, failed_login_attempts FROM auth.users WHERE id = $1',
@@ -671,7 +642,7 @@ export async function aceptarInvitacion(
       ip: contexto.ip,
     });
 
-    return emitirSesion(cliente, filasUsuario[0]!, tenant, plataforma, contexto);
+    return emitirSesion(cliente, filasUsuario[0]!, tenant, contexto);
   });
 }
 
@@ -731,12 +702,12 @@ export async function quitarMiembro(tenantId: string, actorId: string, usuarioId
     );
     if (rowCount === 0) throw noEncontrado('membresía (o es el owner, que no se puede quitar)');
 
-    // Las sesiones que tenía abiertas contra ESTE cliente dejan de valer. Las
-    // que tuviera contra otro cliente siguen, que es lo correcto.
+    // Todas sus sesiones dejan de valer, sin filtrar por tenant: solo pertenecía a
+    // este cliente, así que no hay ninguna otra que preservar. Filtrar por
+    // tenant_id dejaría viva cualquier sesión heredada del modelo anterior.
     await cliente.query(
-      `UPDATE auth.sessions SET revoked_at = now()
-        WHERE user_id = $1 AND tenant_id = $2 AND revoked_at IS NULL`,
-      [usuarioId, tenantId],
+      'UPDATE auth.sessions SET revoked_at = now() WHERE user_id = $1 AND revoked_at IS NULL',
+      [usuarioId],
     );
 
     await registrar(cliente, {

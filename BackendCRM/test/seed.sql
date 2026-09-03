@@ -1,8 +1,23 @@
+-- GENERADO POR test/sync-schema.sh — NO EDITAR A MANO.
+-- Fuente de verdad: repo de infra, sql/crm/900_seed_dev.sql
+-- Regenerado: 2026-09-03
+
 -- 900 — Datos sintéticos para dev. NO correr en prod.
 --
--- Dos clientes con tres conversaciones cada uno, en fases distintas, más
--- usuarios con los cuatro roles de tenant y dos admins de plataforma.
--- Sirve para probar el modelo y, sobre todo, para verificar que RLS aísla.
+-- Dos clientes con tres conversaciones cada uno, en fases distintas, y
+-- **exactamente un usuario admin por cliente**. Sirve para probar el modelo y,
+-- sobre todo, para verificar que RLS aísla.
+--
+-- QUÉ DESAPARECIÓ DE ESTA SEMILLA Y POR QUÉ: antes sembraba seis usuarios,
+-- una membresía cruzada (la misma cuenta en los dos clientes con rol distinto)
+-- y dos admins de plataforma. Nada de eso existe ya en el modelo: cada cliente
+-- es independiente, un usuario pertenece como mucho a UN tenant (ver
+-- 006_un_tenant_por_usuario.sql) y `auth.platform_admins` está en desuso. Una
+-- semilla que siguiera creando esos casos estaría probando un modelo que ya no
+-- es el nuestro — y el índice único de 006 la haría fallar.
+--
+-- El alta real de clientes y de sus usuarios admin se hará desde un backoffice
+-- externo a esta aplicación. Aquí solo se simula el resultado.
 --
 -- Idempotente: se puede correr las veces que haga falta.
 --
@@ -14,14 +29,10 @@
 
 DO $$
 DECLARE
-  t_acme   uuid;
-  t_planb  uuid;
-  u_ana    uuid;
-  u_bruno  uuid;
-  u_carla  uuid;
-  u_diego  uuid;
-  u_gpi1   uuid;
-  u_gpi2   uuid;
+  t_acme       uuid;
+  t_planb      uuid;
+  u_adm_acme   uuid;
+  u_adm_planb  uuid;
   -- Relleno con forma de Argon2id que no valida contra ninguna contraseña.
   fake_hash constant text :=
     '$argon2id$v=19$m=65536,t=3,p=4$c2VtaWxsYS1kZS1kZXY$00000000000000000000000000000000';
@@ -37,46 +48,30 @@ BEGIN
   SELECT id INTO t_acme  FROM auth.tenants WHERE slug = 'acme-formacion';
   SELECT id INTO t_planb FROM auth.tenants WHERE slug = 'planb-trading';
 
-  -- ── usuarios ───────────────────────────────────────────────────────────────
+  -- ── usuarios: uno por cliente, y nada más ──────────────────────────────────
+  -- Los emails van bajo el dominio de cada cliente, no bajo el de GPI: una
+  -- cuenta de esta aplicación es siempre de un cliente concreto.
   INSERT INTO auth.users (email, full_name, status, password_hash, email_verified_at) VALUES
-    ('ana@acme-formacion.test',   'Ana Ríos',        'active', fake_hash, now()),
-    ('bruno@acme-formacion.test', 'Bruno Salas',     'active', fake_hash, now()),
-    ('carla@planb-trading.test',  'Carla Méndez',    'active', fake_hash, now()),
-    ('diego@planb-trading.test',  'Diego Ferrer',    'invited', NULL,     NULL),
-    ('rodrigo@gopeakintelligence.test', 'Rodrigo (staff GPI)', 'active', fake_hash, now()),
-    ('soporte@gopeakintelligence.test', 'Soporte GPI',        'active', fake_hash, now())
+    ('admin@acme-formacion.test', 'Admin Acme Formación', 'active', fake_hash, now()),
+    ('admin@planb-trading.test',  'Admin Plan B Trading', 'active', fake_hash, now())
   ON CONFLICT (email) DO UPDATE SET full_name = EXCLUDED.full_name
   ;
 
-  SELECT id INTO u_ana   FROM auth.users WHERE email = 'ana@acme-formacion.test';
-  SELECT id INTO u_bruno FROM auth.users WHERE email = 'bruno@acme-formacion.test';
-  SELECT id INTO u_carla FROM auth.users WHERE email = 'carla@planb-trading.test';
-  SELECT id INTO u_diego FROM auth.users WHERE email = 'diego@planb-trading.test';
-  SELECT id INTO u_gpi1  FROM auth.users WHERE email = 'rodrigo@gopeakintelligence.test';
-  SELECT id INTO u_gpi2  FROM auth.users WHERE email = 'soporte@gopeakintelligence.test';
+  SELECT id INTO u_adm_acme  FROM auth.users WHERE email = 'admin@acme-formacion.test';
+  SELECT id INTO u_adm_planb FROM auth.users WHERE email = 'admin@planb-trading.test';
 
-  -- ── memberships: los cuatro roles representados ────────────────────────────
+  -- ── memberships: una por usuario, sin cruces ───────────────────────────────
+  -- Rol `admin` y no `owner`: el responsable de facturación de un cliente es
+  -- asunto del backoffice externo, no de un dato sintético de dev. `admin` es
+  -- lo que tendrá el usuario que se cree al dar de alta un cliente.
   INSERT INTO auth.tenant_memberships (tenant_id, user_id, role, status) VALUES
-    (t_acme,  u_ana,   'owner',  'active'),
-    (t_acme,  u_bruno, 'member', 'active'),
-    (t_planb, u_carla, 'owner',  'active'),
-    (t_planb, u_diego, 'viewer', 'invited')
+    (t_acme,  u_adm_acme,  'admin', 'active'),
+    (t_planb, u_adm_planb, 'admin', 'active')
   ON CONFLICT (tenant_id, user_id) DO UPDATE SET role = EXCLUDED.role
   ;
 
-  -- Ana pertenece a los DOS clientes con rol distinto en cada uno: es el caso
-  -- que justifica que memberships sea una tabla aparte y no una columna en users.
-  INSERT INTO auth.tenant_memberships (tenant_id, user_id, role, status) VALUES
-    (t_planb, u_ana, 'admin', 'active')
-  ON CONFLICT (tenant_id, user_id) DO UPDATE SET role = EXCLUDED.role
-  ;
-
-  -- ── admins de plataforma ───────────────────────────────────────────────────
-  INSERT INTO auth.platform_admins (user_id, role, notes) VALUES
-    (u_gpi1, 'superadmin', 'Semilla de dev'),
-    (u_gpi2, 'support',    'Semilla de dev')
-  ON CONFLICT (user_id) DO UPDATE SET role = EXCLUDED.role
-  ;
+  -- Ningún INSERT en auth.platform_admins: la tabla está en desuso y debe
+  -- quedar vacía (ver 006_un_tenant_por_usuario.sql).
 
   -- ── leads: tres por cliente, en fases distintas ────────────────────────────
   INSERT INTO crm.leads (tenant_id, chat_id, name, username, fase, cliente, turnos_fase_actual, fu, conversation) VALUES
@@ -109,5 +104,5 @@ BEGIN
   ON CONFLICT (tenant_id, chat_id) DO UPDATE SET fase = EXCLUDED.fase
   ;
 
-  RAISE NOTICE 'Semilla lista: 2 tenants, 6 usuarios, 5 memberships, 2 admins de plataforma, 6 leads, 3 en buffer, 2 renovaciones.';
+  RAISE NOTICE 'Semilla lista: 2 tenants, 2 usuarios (uno admin por tenant), 2 memberships, 0 admins de plataforma, 6 leads, 3 en buffer, 2 renovaciones.';
 END $$;

@@ -1,16 +1,21 @@
 import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
 import { SignJWT, jwtVerify } from 'jose';
 import { config } from '../config.js';
-import type { RolPlataforma, RolTenant } from './tipos.js';
+import type { RolTenant } from './tipos.js';
 
 const clave = new TextEncoder().encode(config.JWT_SECRET);
 
+/**
+ * Un usuario pertenece a un único cliente, así que la sesión SIEMPRE está
+ * scopeada a ese cliente: `tid` y `rol` no son opcionales. Antes lo eran porque
+ * existía la sesión "sin cliente activo" de quien pertenecía a varios, y la
+ * sesión global de un admin de plataforma. Ninguna de las dos existe ya.
+ */
 export interface ContenidoAccessToken {
-  sub: string;                       // id del usuario
-  sid: string;                       // id de la sesión, para poder revocarla
-  tid: string | null;                // tenant activo
-  rol: RolTenant | null;             // rol dentro de ese tenant
-  plataforma: RolPlataforma | null;  // rol global, si lo tiene
+  sub: string;            // id del usuario
+  sid: string;            // id de la sesión, para poder revocarla
+  tid: string;            // tenant de la sesión
+  rol: RolTenant;         // rol dentro de ese tenant
 }
 
 export async function firmarAccessToken(contenido: ContenidoAccessToken): Promise<string> {
@@ -30,13 +35,18 @@ export async function verificarAccessToken(token: string): Promise<ContenidoAcce
     algorithms: ['HS256'], // fijado: sin esto, un token con alg:none sería aceptado
   });
 
-  return {
-    sub: payload.sub as string,
-    sid: payload.sid as string,
-    tid: (payload.tid as string | null) ?? null,
-    rol: (payload.rol as RolTenant | null) ?? null,
-    plataforma: (payload.plataforma as RolPlataforma | null) ?? null,
-  };
+  const tid = payload.tid as string | undefined;
+  const rol = payload.rol as RolTenant | undefined;
+
+  // Un token firmado por nosotros pero sin tenant es de la etapa anterior (la que
+  // permitía sesiones sin cliente activo). Se rechaza aquí, en un solo sitio, en
+  // vez de dejar que llegue a los endpoints con tenantId nulo y que cada uno
+  // decida qué hacer: con el modelo nuevo esa sesión no representa nada.
+  if (!tid || !rol) {
+    throw new Error('el token no lleva tenant; es de un modelo anterior');
+  }
+
+  return { sub: payload.sub as string, sid: payload.sid as string, tid, rol };
 }
 
 /**
