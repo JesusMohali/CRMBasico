@@ -1,13 +1,12 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
-import type { Conversation } from '@/views/ChatsLead.vue';
-import { useChatFoldersStore, useConfirmStore, recencyBucket, type ChatFolder } from '../../stores';
+import { useChatFoldersStore, useConfirmStore, recencyBucket, type ChatFolder, type Contact } from '../../stores';
 import FolderModal from './FolderModal.vue';
 
-const props = defineProps<{ conversations: Conversation[]; allConversations: Conversation[]; activeId: number }>();
+const props = defineProps<{ conversations: Contact[]; allConversations: Contact[]; activeId: number }>();
 const avatarUrls = import.meta.glob('../../assets/media/avatars/*', { eager: true, query: '?url', import: 'default' }) as Record<string, string>;
 const search = defineModel<string>('search', { required: true });
-const emit = defineEmits<{ select: [conversation: Conversation] }>();
+const emit = defineEmits<{ select: [conversation: Contact] }>();
 
 const chatFolders = useChatFoldersStore();
 const confirmStore = useConfirmStore();
@@ -18,7 +17,7 @@ const availableTags = computed(() => {
 	return [...set].sort();
 });
 
-function matchesFolder(conversation: Conversation, folder: ChatFolder) {
+function matchesFolder(conversation: Contact, folder: ChatFolder) {
 	if (folder.filterField === 'tag') return conversation.tags.includes(folder.filterValue);
 	if (folder.filterField === 'phase') return conversation.phase === folder.filterValue;
 	return recencyBucket(conversation.updatedAt) === folder.filterValue;
@@ -32,7 +31,7 @@ interface FolderGroup {
 	isDefault: boolean;
 	filterField?: ChatFolder['filterField'];
 	filterValue?: string;
-	conversations: Conversation[];
+	conversations: Contact[];
 }
 
 // El id 0 queda reservado para "Todos" (siempre existe, no es editable);

@@ -2,6 +2,7 @@
 import { useRouter } from 'vue-router';
 import { useConversationsStore } from '../stores';
 import { FASE_COLORS } from '../constants/fases';
+import SortableTh from '../components/common/SortableTh.vue';
 
 const router = useRouter();
 const conversations = useConversationsStore();
@@ -53,12 +54,12 @@ function handleSearch(event: Event) {
 				<table class="kt-table">
 					<thead>
 						<tr>
-							<th>Usuario</th>
-							<th>Correo</th>
-							<th>Canal</th>
-							<th>Fase</th>
+							<SortableTh label="Usuario" :active="conversations.sortKey === 'name'" :direction="conversations.sortDir" @sort="conversations.setSort('name')" />
+							<SortableTh label="Correo" :active="conversations.sortKey === 'email'" :direction="conversations.sortDir" @sort="conversations.setSort('email')" />
+							<SortableTh label="Canal" :active="conversations.sortKey === 'channel'" :direction="conversations.sortDir" @sort="conversations.setSort('channel')" />
+							<SortableTh label="Fase" :active="conversations.sortKey === 'phase'" :direction="conversations.sortDir" @sort="conversations.setSort('phase')" />
 							<th>Antigüedad</th>
-							<th>Última actualización</th>
+							<SortableTh label="Última actualización" :active="conversations.sortKey === 'updated'" :direction="conversations.sortDir" @sort="conversations.setSort('updated')" />
 							<th>Motivo</th>
 							<th></th>
 						</tr>

@@ -940,6 +940,78 @@ h2 {
     accent-color: var(--primary);
 }
 
+/* ── Columnas ordenables (SortableTh.vue) ─────────────────────────── */
+.sortable-col {
+    cursor: pointer;
+    user-select: none;
+}
+
+.sortable-col:hover {
+    color: var(--text);
+}
+
+.sortable-col-inner {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.sort-indicator {
+    display: inline-flex;
+    flex-direction: column;
+    gap: 1px;
+}
+
+.sort-indicator i {
+    font-size: 7px;
+    line-height: 1;
+    color: var(--muted-foreground);
+    opacity: .4;
+}
+
+.sort-indicator i.active {
+    opacity: 1;
+    color: var(--primary);
+}
+
+/* ── Página de Contactos ──────────────────────────────────────────── */
+.contact-name-btn {
+    border: 0;
+    background: transparent;
+    padding: 0;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+    color: inherit;
+}
+
+.contact-name-btn:hover b {
+    color: var(--primary);
+    text-decoration: underline;
+}
+
+.contact-tags {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px;
+}
+
+.contact-tag {
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: var(--background);
+    border: 1px solid var(--border);
+    color: var(--muted-foreground);
+    font-size: 10px;
+    white-space: nowrap;
+}
+
+.contact-tag-more {
+    color: var(--text);
+    font-weight: 600;
+}
+
 .team-name {
     display: flex;
     align-items: center;
