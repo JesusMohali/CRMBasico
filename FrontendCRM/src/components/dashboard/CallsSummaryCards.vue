@@ -15,11 +15,9 @@
 				</div>
 			</template>
 			<template v-else>
-				<component
-					:is="card.empty ? 'article' : 'RouterLink'"
+				<article
 					v-for="(card, index) in dashboard.callWidgets"
 					:key="card.key"
-					:to="card.empty ? undefined : card.route"
 					class="crm-stat-card"
 					:style="{ '--card-color': card.color }">
 					<div v-if="card.empty" class="crm-stat-empty">
@@ -51,7 +49,7 @@
 							<path :d="card.chart" fill="none" stroke="var(--card-color)" stroke-width="1.5" vector-effect="non-scaling-stroke" />
 						</svg>
 					</template>
-				</component>
+				</article>
 			</template>
 		</div>
 	</section>
