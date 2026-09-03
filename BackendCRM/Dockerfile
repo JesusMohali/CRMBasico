@@ -39,6 +39,12 @@ COPY --chown=node:node --from=deps  /app/node_modules ./node_modules
 COPY --chown=node:node --from=build /app/dist ./dist
 COPY --chown=node:node package.json ./
 
+# Bundle de CA de AWS RDS. Sin el, la aplicacion no arranca con TLS activo: se
+# conecta verificando el certificado del servidor (rejectUnauthorized: true) y la
+# CA de AWS no esta en el store por defecto de Node. Se copia en la etapa final
+# para que un cambio del bundle no invalide la cache de la compilacion.
+COPY --chown=node:node certs-rds-global.pem ./
+
 USER node
 EXPOSE 3000
 

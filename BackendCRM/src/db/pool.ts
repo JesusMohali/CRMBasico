@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import pg from 'pg';
 import { config } from '../config.js';
 
@@ -7,16 +9,43 @@ import { config } from '../config.js';
 // El OID 20 es int8.
 pg.types.setTypeParser(20, (valor) => valor);
 
+/**
+ * Lee el bundle de CA de AWS RDS que se usa para verificar el certificado del
+ * servidor.
+ *
+ * Si falta, se cae al arrancar en vez de seguir con rejectUnauthorized: false.
+ * Es deliberado: una conexión cifrada pero sin verificar el certificado protege
+ * de quien escucha el cable, no de quien se pone en medio, y ese "va cifrado"
+ * pasa desapercibido durante meses. Mejor un arranque que falla con un mensaje
+ * claro que una base a la que se habla sin saber quién contesta.
+ */
+function caDeRds(): string {
+  const ruta = resolve(config.RDS_CA_BUNDLE_PATH);
+  try {
+    return readFileSync(ruta, 'utf8');
+  } catch (error) {
+    throw new Error(
+      `No se pudo leer el bundle de CA de RDS en ${ruta}. Con TLS activo ` +
+        `(DATABASE_SSL) hace falta para verificar el certificado del servidor. ` +
+        `Ajustá RDS_CA_BUNDLE_PATH o descargá el bundle de ` +
+        `https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem`,
+      { cause: error },
+    );
+  }
+}
+
 export const pool = new pg.Pool({
   connectionString: config.DATABASE_URL,
   max: 10,
   idleTimeoutMillis: 30_000,
   connectionTimeoutMillis: 5_000,
-  // RDS obliga TLS (rds.force_ssl = 1). El certificado lo firma la CA de AWS,
-  // que no está en el store por defecto de Node; sin traer ese bundle, verificar
-  // la cadena falla. Se cifra igual, pero no se autentica al servidor.
-  // TODO: montar el bundle de RDS y pasar a rejectUnauthorized: true.
-  ssl: config.usarTlsEnBase ? { rejectUnauthorized: false } : false,
+  // RDS obliga TLS (rds.force_ssl = 1) y su certificado lo firma una CA de AWS
+  // que no está en el store por defecto de Node. Con el bundle global montado en
+  // la imagen (ver Dockerfile) la cadena sí valida, así que rejectUnauthorized va
+  // en true: la conexión además de cifrada autentica al servidor.
+  //
+  // El fichero se lee una sola vez, al construir el pool, y no en cada conexión.
+  ssl: config.usarTlsEnBase ? { ca: caDeRds(), rejectUnauthorized: true } : false,
 });
 
 export type Ejecutor = Pick<pg.PoolClient, 'query'>;

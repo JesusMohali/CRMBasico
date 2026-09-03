@@ -21,8 +21,9 @@ npm test
 ```
 
 Los tests levantan el esquema completo, siembran dos clientes con sus usuarios y ejercitan la API
-de punta a punta. **22 pruebas**, ninguna con dobles: todo va contra Postgres de verdad, porque lo
-que se está probando es en buena parte comportamiento de la base (RLS, constraints, transacciones).
+de punta a punta. **25 pruebas** contra Postgres de verdad, porque lo que se está probando es en
+buena parte comportamiento de la base (RLS, constraints, transacciones). El único doble de la suite
+es el cliente de SES: al otro lado de ese no hay un contenedor que levantar, hay AWS.
 
 `test/schema.sql` es una copia consolidada del DDL de infra, generada por `test/sync-schema.sh`.
 Si el esquema cambia allí, hay que regenerarla y commitearla.
@@ -77,13 +78,22 @@ a viewer surte efecto en el siguiente refresh, no cuando caduque una sesión de 
 costaría verificar un hash real, y la respuesta es idéntica a la de contraseña incorrecta. Hay un
 test que compara ambas respuestas.
 
+**El correo sale por Amazon SES y un fallo de envío no rompe la petición.** Cuando se manda el
+correo, la invitación (o el token de recuperación) ya está escrita y confirmada en la base. Un 500
+ahí le diría al usuario que no se hizo nada cuando sí se hizo, y al reintentar se encontraría con
+"esa persona ya pertenece a este cliente". El fallo se registra con `log.error` y la petición sigue:
+el correo siempre se puede reenviar. Con `EMAIL_ENABLED=false` no se manda nada y el token sale por
+el log — es la única forma de seguir el flujo en local, y es lo que usan los tests.
+
+**La conexión a la RDS verifica el certificado del servidor.** `certs-rds-global.pem` (el bundle
+global de CA de AWS) viaja en la imagen y se pasa como `ca` con `rejectUnauthorized: true`. Si el
+fichero no está y el TLS está activo, el proceso **no arranca**: cifrar sin verificar protege de
+quien escucha el cable pero no de quien se pone en medio, y ese "va cifrado" pasa desapercibido
+durante meses.
+
 ## Lo que falta
 
-- **Envío de emails.** Los tokens de invitación y de recuperación se generan y guardan bien, pero
-  no se mandan: en desarrollo salen por el log y en producción no salen a ningún sitio. Hay dos
-  `TODO(envío de email)` marcando dónde engancharlo.
 - **Despliegue.** No hay repositorio de ECR, ni servicio de ECS, ni regla del ALB para esta API.
   El `Dockerfile` está listo y probado, pero la infraestructura hay que crearla.
-- **Verificación del certificado de la RDS.** La conexión va cifrada pero con
-  `rejectUnauthorized: false`, porque la CA de AWS no está en el store de Node. Falta montar el
-  bundle de RDS.
+- **Identidad de SES.** El dominio del remitente (`EMAIL_FROM`) tiene que estar verificado en SES
+  y la cuenta fuera del sandbox; la task necesita permiso `ses:SendEmail`.
