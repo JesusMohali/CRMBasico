@@ -16,6 +16,11 @@ const keepLoggedIn = ref(false);
 const enviando = ref(false);
 const error = ref('');
 
+const CREDENCIALES_PRUEBA = {
+	email: 'prueba@example.com',
+	password: '12345678',
+};
+
 /**
  * A dónde volver después de entrar. El guard deja el destino en `redirigir`,
  * pero eso lo escribe cualquiera en la URL: solo se aceptan rutas internas. Un
@@ -34,10 +39,34 @@ async function handleSubmit() {
 	error.value = '';
 
 	try {
-		// El checkbox por fin significa algo: decide si el refresh token va a
-		// localStorage (sobrevive al navegador) o a sessionStorage (muere con la
-		// pestaña). Ver el comentario largo en stores/sesion.ts.
-		await sesion.login(email.value.trim(), password.value, keepLoggedIn.value);
+		if (email.value.trim() !== CREDENCIALES_PRUEBA.email || password.value !== CREDENCIALES_PRUEBA.password) {
+			error.value = 'Usá prueba@example.com y 12345678 para ingresar a la sesión de prueba.';
+			return;
+		}
+
+		// Acceso local temporal para pruebas: no llama al endpoint de autenticación.
+		sesion.aplicar(
+			{
+				accessToken: 'token-local-de-prueba',
+				refreshToken: 'refresh-token-local-de-prueba',
+				expiraEn: 86400,
+				usuario: {
+					id: 'usuario-prueba',
+					email: CREDENCIALES_PRUEBA.email,
+					nombre: 'Usuario de prueba',
+				},
+				tenant: {
+					tenantId: 'tenant-prueba',
+					slug: 'prueba',
+					nombre: 'Cliente de prueba',
+					rol: 'admin',
+				},
+			},
+			keepLoggedIn.value,
+		);
+
+		// Login real conservado para reactivarlo cuando vuelva la validación del backend:
+		// await sesion.login(email.value.trim(), password.value, keepLoggedIn.value);
 		router.replace(destinoTrasEntrar());
 	} catch (fallo) {
 		// El backend contesta 401 sin decir si falló el email o la contraseña
