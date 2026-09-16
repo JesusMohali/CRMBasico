@@ -1,8 +1,0 @@
-node_modules
-dist
-.git
-test
-*.md
-.env
-.env.*
-db
