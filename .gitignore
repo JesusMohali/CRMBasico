@@ -1,0 +1,40 @@
+# Dependencies
+node_modules/
+
+# Build output
+**/dist/
+**/build/
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Logs and reports
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+coverage/
+
+# TypeScript incremental files
+*.tsbuildinfo
+
+# Test and tool caches
+.vite/
+.cache/
+
+# Local Docker overrides
+docker-compose.override.yml
+
+# Operating system files
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Editor settings and local workspace data
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea/
